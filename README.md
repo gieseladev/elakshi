@@ -1,2 +1,3 @@
-# elakshi
-Music database 🎶
+# Elakshi
+
+Music database for Giesela.
