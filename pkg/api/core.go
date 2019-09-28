@@ -2,11 +2,13 @@ package api
 
 import (
 	"context"
+	"github.com/gieseladev/glyrics/v3/pkg/search"
 	"github.com/jinzhu/gorm"
 )
 
 type Core struct {
-	DB *gorm.DB
+	DB             *gorm.DB
+	LyricsSearcher search.Searcher
 }
 
 type coreKey struct{}

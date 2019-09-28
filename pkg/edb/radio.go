@@ -1,7 +1,5 @@
 package edb
 
-import "github.com/jinzhu/gorm"
-
 type RadioStation struct {
 	DBModel
 
@@ -10,5 +8,4 @@ type RadioStation struct {
 	Image   Image
 
 	Genres []Genre `gorm:"MANY2MANY:radio_genres"`
-	A      gorm.Model
 }

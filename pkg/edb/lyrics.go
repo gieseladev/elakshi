@@ -5,13 +5,15 @@ import "github.com/jinzhu/gorm"
 type Lyrics struct {
 	DBModel
 
-	TrackID uint64 `gorm:"INDEX"`
-	Text    string
+	TrackID   uint64 `gorm:"INDEX"`
+	SourceURL string
+	Text      string
 }
 
-func GetLyrics(db *gorm.DB, eid string) (bool, Lyrics) {
+// GetTrackLyrics retrieves the lyrics for a given track.
+func GetTrackLyrics(db *gorm.DB, trackID uint64) (Lyrics, error) {
 	var lyrics Lyrics
-	db.First(&lyrics, "track_id = ?", eid)
+	err := db.Take(&lyrics, "track_id = ?", trackID).Error
 
-	return lyrics != Lyrics{}, lyrics
+	return lyrics, err
 }

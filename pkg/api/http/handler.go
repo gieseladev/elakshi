@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/gieseladev/elakshi/pkg/api"
+	"log"
 	"net/http"
 )
 
@@ -50,7 +51,11 @@ func (h *httpHandler) Start() error {
 	go func() {
 		// when the server stopped serving, send notification by closing the
 		// done channel
-		_ = h.srv.ListenAndServe()
+		err := h.srv.ListenAndServe()
+		if err != nil {
+			log.Println("http server stopped", err)
+		}
+
 		close(h.done)
 	}()
 
@@ -72,12 +77,13 @@ func (h *httpHandler) Done() <-chan struct{} {
 }
 
 const (
-	trackPath    = "/track/"
-	trackPathLen = len(trackPath)
+	trackPath  = "/track/"
+	lyricsPath = "/lyrics/"
 )
 
 func (h *httpHandler) addRoutes() {
 	h.mux.HandleFunc(trackPath, h.getTrack)
+	h.mux.HandleFunc(lyricsPath, h.getLyrics)
 }
 
 // writeJSONResponse writes json encoded data into the http response writer and
@@ -97,10 +103,11 @@ func handleError(w http.ResponseWriter, err error) {
 	}
 
 	w.WriteHeader(statusCode)
+	_, _ = w.Write([]byte(err.Error()))
 }
 
 func (h *httpHandler) getTrack(w http.ResponseWriter, r *http.Request) {
-	eid := r.URL.Path[trackPathLen:]
+	eid := r.URL.Path[len(trackPath):]
 	track, err := api.GetTrack(h.core.DB, eid)
 	if err != nil {
 		handleError(w, err)
@@ -108,6 +115,19 @@ func (h *httpHandler) getTrack(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := writeJSONResponse(w, track); err != nil {
+		panic(err)
+	}
+}
+
+func (h *httpHandler) getLyrics(w http.ResponseWriter, r *http.Request) {
+	eid := r.URL.Path[len(lyricsPath):]
+	lyrics, err := api.GetTrackLyrics(api.WithCore(r.Context(), h.core), eid)
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+
+	if err := writeJSONResponse(w, lyrics); err != nil {
 		panic(err)
 	}
 }
