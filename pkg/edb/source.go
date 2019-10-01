@@ -6,7 +6,7 @@ type AudioSource struct {
 	DBModel
 
 	Type string
-	URI  string `gorm:"UNIQUE"`
+	URI  string `gorm:"UNIQUE_INDEX"`
 
 	TrackSources []TrackSource
 }

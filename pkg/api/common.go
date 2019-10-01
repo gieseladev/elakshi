@@ -2,8 +2,6 @@ package api
 
 import (
 	"context"
-	"encoding/base32"
-	"encoding/binary"
 	"errors"
 	"github.com/gieseladev/elakshi/pkg/edb"
 	"github.com/gieseladev/glyrics/v3"
@@ -13,38 +11,11 @@ import (
 )
 
 var (
-	ErrEIDInvalid  = errors.New("eid invalid")
 	ErrEIDNotFound = errors.New("eid was not found")
 )
 
-var NoPaddingEncoding = base32.StdEncoding.WithPadding(base32.NoPadding)
-
-// EncodeEID encodes an id into an eid.
-func EncodeEID(id uint64) string {
-	var data = make([]byte, 8)
-	binary.LittleEndian.PutUint64(data, id)
-
-	return NoPaddingEncoding.EncodeToString(data)
-}
-
-// DecodeEID converts the encoded id into its integer representation.
-// Returns ErrEIDInvalid if the eid is invalid.
-func DecodeEID(eid string) (uint64, error) {
-	if NoPaddingEncoding.DecodedLen(len(eid)) > 8 {
-		return 0, ErrEIDInvalid
-	}
-
-	data := make([]byte, 8)
-	_, err := NoPaddingEncoding.Decode(data, []byte(eid))
-	if err != nil {
-		return 0, ErrEIDInvalid
-	}
-
-	return binary.LittleEndian.Uint64(data), nil
-}
-
 func GetTrack(db *gorm.DB, eid string) (edb.Track, error) {
-	trackID, err := DecodeEID(eid)
+	trackID, err := edb.DecodeEID(eid)
 	if err != nil {
 		return edb.Track{}, err
 	}
@@ -90,7 +61,7 @@ var (
 // GetTrackLyrics retrieves lyrics for the track with the given EID.
 // The context must contain the api core.
 func GetTrackLyrics(ctx context.Context, eid string) (edb.Lyrics, error) {
-	trackID, err := DecodeEID(eid)
+	trackID, err := edb.DecodeEID(eid)
 	if err != nil {
 		return edb.Lyrics{}, err
 	}

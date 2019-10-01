@@ -4,16 +4,22 @@ import (
 	"errors"
 	"github.com/gieseladev/elakshi/pkg/edb"
 	"github.com/gieseladev/elakshi/pkg/errutils"
+	"github.com/jinzhu/gorm"
 	"github.com/zmb3/spotify"
 	"sync"
 )
 
+const (
+	spotifyServiceName = "spotify"
+)
+
 type spotifyExtractor struct {
 	client *spotify.Client
+	db     *gorm.DB
 }
 
 func NewExtractor(client *spotify.Client) *spotifyExtractor {
-	return &spotifyExtractor{client}
+	return &spotifyExtractor{client: client}
 }
 
 func (s *spotifyExtractor) genresFromGenres(genres []string) ([]edb.Genre, error) {
@@ -194,8 +200,9 @@ func (s *spotifyExtractor) trackFromFullTrack(track *spotify.FullTrack) (edb.Tra
 		return edb.Track{}, errors.New("spotify provided negative duration")
 	}
 
+	// TODO external ids
+
 	return edb.Track{
-		ISRC:              track.ExternalIDs["isrc"],
 		Name:              track.Name,
 		Artist:            mainArtist,
 		AdditionalArtists: artists,
@@ -205,14 +212,18 @@ func (s *spotifyExtractor) trackFromFullTrack(track *spotify.FullTrack) (edb.Tra
 }
 
 func (s *spotifyExtractor) trackFromTrackID(trackID string) (edb.Track, error) {
+	var t edb.Track
+	err := s.db.Scopes(edb.GetModelByExternalRef(&t, spotifyServiceName, trackID)).Scan(&t).Error
+	if err == nil {
+		return t, nil
+	} else if !gorm.IsRecordNotFoundError(err) {
+		return edb.Track{}, err
+	}
+
 	track, err := s.client.GetTrack(spotify.ID(trackID))
 	if err != nil {
 		return edb.Track{}, err
 	}
 
 	return s.trackFromFullTrack(track)
-}
-
-func (s *spotifyExtractor) Test(trackID string) (edb.Track, error) {
-	return s.trackFromTrackID(trackID)
 }

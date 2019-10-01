@@ -9,3 +9,7 @@ type RadioStation struct {
 
 	Genres []Genre `gorm:"MANY2MANY:radio_genres"`
 }
+
+func (r RadioStation) Namespace() string {
+	return "radio"
+}

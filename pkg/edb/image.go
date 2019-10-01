@@ -5,3 +5,7 @@ type Image struct {
 
 	URI string
 }
+
+func (i Image) Namespace() string {
+	return "image"
+}

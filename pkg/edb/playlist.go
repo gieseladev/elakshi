@@ -19,3 +19,7 @@ type Playlist struct {
 
 	Tracks []PlaylistTrack
 }
+
+func (p Playlist) Namespace() string {
+	return "playlist"
+}

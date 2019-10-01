@@ -10,22 +10,29 @@ type Track struct {
 
 	// TODO statistics
 
-	ISRC string `gorm:"UNIQUE"`
+	Name     string
+	LengthMS uint32 `gorm:"type:integer"`
 
-	Name              string
-	Images            []Image `gorm:"MANY2MANY:track_images"`
 	ArtistID          uint64
 	Artist            Artist
 	AdditionalArtists []Artist `gorm:"MANY2MANY:track_artists"`
-	AlbumID           uint64
-	Album             Album
-	LengthMS          uint32 `gorm:"type:integer"`
-	ReleaseDate       time.Time
-	Genres            []Genre `gorm:"MANY2MANY:track_genres"`
+
+	AlbumID uint64
+	Album   Album
+
+	Images      []Image `gorm:"MANY2MANY:track_images"`
+	ReleaseDate time.Time
+	Genres      []Genre `gorm:"MANY2MANY:track_genres"`
+
+	ExternalReferences []ExternalRef `gorm:"MANY2MANY:track_references"`
+}
+
+func (track Track) Namespace() string {
+	return "track"
 }
 
 // AllArtists a slice containing all artists.
-func (track *Track) AllArtists() []Artist {
+func (track Track) AllArtists() []Artist {
 	artists := make([]Artist, len(track.AdditionalArtists)+1)
 	artists[0] = track.Artist
 	copy(artists[1:], track.AdditionalArtists)
@@ -34,7 +41,7 @@ func (track *Track) AllArtists() []Artist {
 }
 
 // Length returns the length of the track as a duration.
-func (track *Track) Length() time.Duration {
+func (track Track) Length() time.Duration {
 	return time.Duration(track.LengthMS) * time.Millisecond
 }
 
@@ -54,25 +61,36 @@ type Artist struct {
 	StartDate time.Time
 	EndDate   time.Time
 	Genres    []Genre `gorm:"MANY2MANY:artist_genres"`
+
+	ExternalReferences []ExternalRef `gorm:"MANY2MANY:artist_references"`
+}
+
+func (a Artist) Namespace() string {
+	return "artist"
 }
 
 // IsEmpty checks whether the artist is empty.
-func (a *Artist) IsEmpty() bool {
-	return a == nil || a.Name == ""
+func (a Artist) IsEmpty() bool {
+	return a.Name == ""
 }
 
 type Album struct {
 	DBModel
 
-	Name   string
-	Images []Image `gorm:"MANY2MANY:album_images"`
-	// TODO artists order?
-	Artists []Artist `gorm:"MANY2MANY:album_artists"`
+	Name        string
+	Artists     []Artist `gorm:"MANY2MANY:album_artists"`
+	Images      []Image  `gorm:"MANY2MANY:album_images"`
+	ReleaseDate time.Time
 
 	// TODO length? Calculate dynamically or update on user change
 
-	ReleaseDate time.Time
-	Genres      []Genre `gorm:"MANY2MANY:album_genres"`
+	Genres []Genre `gorm:"MANY2MANY:album_genres"`
+
+	ExternalReferences []ExternalRef `gorm:"MANY2MANY:album_references"`
+}
+
+func (a Album) Namespace() string {
+	return "album"
 }
 
 type Genre struct {
@@ -82,6 +100,10 @@ type Genre struct {
 
 	ParentID uint64 `gorm:"UNIQUE_INDEX:uix_genre"`
 	Parent   *Genre
+}
+
+func (g Genre) Namespace() string {
+	return "genre"
 }
 
 const allParentGenres = `
@@ -118,12 +140,16 @@ SELECT *
 FROM cte_subgenre;
 `
 
+// GetParentGenres returns a slice containing the upper hierarchy of a genre.
+// The order is lowest-first and includes the genre itself as the first entry.
 func GetParentGenres(db *gorm.DB, genreID uint64) ([]Genre, error) {
 	var genres []Genre
 	err := db.Raw(allParentGenres, genreID).Scan(genres).Error
 	return genres, err
 }
 
+// GetSubGenres returns a slice containing the lower hierarchy of a genre.
+// The order is lowest-first and includes the genre itself as the first entry.
 func GetSubGenres(db *gorm.DB, genreID uint64) ([]Genre, error) {
 	var genres []Genre
 	err := db.Raw(allSubGenres, genreID).Scan(genres).Error
