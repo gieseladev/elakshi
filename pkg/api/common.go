@@ -63,12 +63,12 @@ func GetTrack(db *gorm.DB, eid string) (edb.Track, error) {
 
 func findLyrics(ctx context.Context, searcher search.Searcher, track edb.Track) (edb.Lyrics, bool) {
 	var queryBuilder strings.Builder
-	if artist, ok := track.FirstArtist(); ok {
-		queryBuilder.WriteString(artist.Name)
-		queryBuilder.WriteRune(' ')
-	}
-
 	queryBuilder.WriteString(track.Name)
+
+	if artist := track.Artist; artist.Name != "" {
+		queryBuilder.WriteString(" - ")
+		queryBuilder.WriteString(artist.Name)
+	}
 
 	// FIXME quality control!
 	info := glyrics.SearchFirst(ctx, searcher, queryBuilder.String())
@@ -108,7 +108,7 @@ func GetTrackLyrics(ctx context.Context, eid string) (edb.Lyrics, error) {
 	}
 
 	var track edb.Track
-	if err := core.DB.Preload("Artists").Take(&track).Error; err != nil {
+	if err := core.DB.Preload("Artist").Take(&track).Error; err != nil {
 		return edb.Lyrics{}, err
 	}
 

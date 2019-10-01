@@ -2,6 +2,8 @@ package common
 
 import "time"
 
+// TODO move to standalone library
+
 type TracklistTrackInfo struct {
 	Track string
 

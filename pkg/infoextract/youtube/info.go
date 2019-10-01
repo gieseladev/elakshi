@@ -62,6 +62,21 @@ func parseYTDuration(duration string) (time.Duration, error) {
 	return time.Duration(minutes)*time.Minute + time.Duration(seconds)*time.Second, nil
 }
 
+func (yt *youtubeExtractor) trackSourcesFromTracklist(tracklist string, video *youtube.Video) ([]edb.TrackSource, error) {
+	return []edb.TrackSource{}, nil
+}
+
+func (yt *youtubeExtractor) trackFromVideo(video *youtube.Video) (edb.Track, error) {
+	// TODO map to database
+	// TODO search artist by youtube channel
+	return edb.Track{
+		Name: video.Snippet.Title,
+		AdditionalArtists: []edb.Artist{{
+			Name: video.Snippet.ChannelTitle,
+		}},
+	}, nil
+}
+
 func (yt *youtubeExtractor) parseVideo(video *youtube.Video) (edb.AudioSource, error) {
 	if video.Snippet == nil || video.ContentDetails == nil {
 		panic("video requires snippet, contentDetails")
@@ -76,13 +91,19 @@ func (yt *youtubeExtractor) parseVideo(video *youtube.Video) (edb.AudioSource, e
 
 	tracklist := common.ExtractTracklistFromText(video.Snippet.Description, videoLength)
 	if len(tracklist) > 1 {
-		// TODO handle tracklist
+		// TODO pass tracklist
+		trackSources, err = yt.trackSourcesFromTracklist("", video)
+		if err != nil {
+			return edb.AudioSource{}, nil
+		}
 	} else {
+		track, err := yt.trackFromVideo(video)
+		if err != nil {
+			return edb.AudioSource{}, nil
+		}
 
-		// TODO search artist by youtube channel
 		trackSources = []edb.TrackSource{{
-			// TODO create track
-			Track:         edb.Track{},
+			Track:         track,
 			StartOffsetMS: 0,
 			EndOffsetMS:   uint32(videoLength.Milliseconds()),
 		}}

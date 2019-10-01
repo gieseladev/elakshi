@@ -9,27 +9,28 @@ type Track struct {
 	DBModel
 
 	// TODO statistics
-	// TODO Artists isn't sorted
 
 	ISRC string `gorm:"UNIQUE"`
 
-	Name        string
-	Images      []Image  `gorm:"MANY2MANY:track_images"`
-	Artists     []Artist `gorm:"MANY2MANY:track_artists"`
-	AlbumID     uint64
-	Album       Album
-	LengthMS    uint32 `gorm:"type:integer"`
-	ReleaseDate time.Time
-	Genres      []Genre `gorm:"MANY2MANY:track_genres"`
+	Name              string
+	Images            []Image `gorm:"MANY2MANY:track_images"`
+	ArtistID          uint64
+	Artist            Artist
+	AdditionalArtists []Artist `gorm:"MANY2MANY:track_artists"`
+	AlbumID           uint64
+	Album             Album
+	LengthMS          uint32 `gorm:"type:integer"`
+	ReleaseDate       time.Time
+	Genres            []Genre `gorm:"MANY2MANY:track_genres"`
 }
 
-// FirstArtist returns the first artist.
-func (track *Track) FirstArtist() (Artist, bool) {
-	if len(track.Artists) > 0 {
-		return track.Artists[0], true
-	}
+// AllArtists a slice containing all artists.
+func (track *Track) AllArtists() []Artist {
+	artists := make([]Artist, len(track.AdditionalArtists)+1)
+	artists[0] = track.Artist
+	copy(artists[1:], track.AdditionalArtists)
 
-	return Artist{}, false
+	return artists
 }
 
 // Length returns the length of the track as a duration.
@@ -55,11 +56,17 @@ type Artist struct {
 	Genres    []Genre `gorm:"MANY2MANY:artist_genres"`
 }
 
+// IsEmpty checks whether the artist is empty.
+func (a *Artist) IsEmpty() bool {
+	return a == nil || a.Name == ""
+}
+
 type Album struct {
 	DBModel
 
-	Name    string
-	Images  []Image  `gorm:"MANY2MANY:album_images"`
+	Name   string
+	Images []Image `gorm:"MANY2MANY:album_images"`
+	// TODO artists order?
 	Artists []Artist `gorm:"MANY2MANY:album_artists"`
 
 	// TODO length? Calculate dynamically or update on user change

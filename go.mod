@@ -7,6 +7,8 @@ require (
 	github.com/jinzhu/gorm v1.9.11
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/stretchr/testify v1.3.0
+	github.com/zmb3/spotify v0.0.0-20190930171422-c23dd5d1a0c9
 	golang.org/x/crypto v0.0.0-20190926180335-cea2066c6411 // indirect
+	golang.org/x/oauth2 v0.0.0-20190226205417-e64efc72b421
 	google.golang.org/api v0.3.1
 )
