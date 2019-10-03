@@ -3,11 +3,9 @@ package spotify
 import (
 	"errors"
 	"github.com/gieseladev/elakshi/pkg/edb"
-	"github.com/gieseladev/elakshi/pkg/errutils"
 	"github.com/gieseladev/elakshi/pkg/infoextract/common"
 	"github.com/jinzhu/gorm"
 	"github.com/zmb3/spotify"
-	"sync"
 )
 
 const (
@@ -29,41 +27,52 @@ func NewExtractor(db *gorm.DB, client *spotify.Client) *spotifyExtractor {
 	return &spotifyExtractor{db: db, client: client}
 }
 
-func (s *spotifyExtractor) imageFromImage(image spotify.Image) (edb.Image, error) {
-	return edb.Image{
-		// TODO schedule download
-		URI: image.URL,
-	}, nil
+// TODO move to common
+func (s *spotifyExtractor) GetImage(uri string) (edb.Image, error) {
+	image := edb.Image{
+		SourceURI: uri,
+	}
+
+	err := s.db.FirstOrCreate(&image, &image).Error
+	if err != nil {
+		return edb.Image{}, err
+	}
+
+	// TODO schedule download if URI is nil
+
+	return image, nil
+}
+
+func (s *spotifyExtractor) extRefsFromIDs(externalIDs map[string]string) []edb.ExternalRef {
+	var refs []edb.ExternalRef
+
+	if isrc, ok := externalIDs["isrc"]; ok {
+		refs = append(refs, edb.NewExternalRef("isrc", isrc))
+	}
+
+	if ean, ok := externalIDs["ean"]; ok {
+		refs = append(refs, edb.NewExternalRef("ean", ean))
+	}
+
+	if upc, ok := externalIDs["upc"]; ok {
+		refs = append(refs, edb.NewExternalRef("upc", upc))
+	}
+
+	return refs
 }
 
 func (s *spotifyExtractor) imagesFromImages(images []spotify.Image) ([]edb.Image, error) {
-	// TODO It seems like there's only ever one image (but in varying sizes)!
-
-	var mux sync.Mutex
-	var wg sync.WaitGroup
-	var errs errutils.MultiError
-
-	imgs := make([]edb.Image, 0, len(images))
-	wg.Add(len(images))
-	for _, image := range images {
-		go func(image spotify.Image) {
-			defer wg.Done()
-			i, err := s.imageFromImage(image)
-
-			mux.Lock()
-			defer mux.Unlock()
-
-			if err == nil {
-				imgs = append(imgs, i)
-			} else {
-				errs = append(errs, err)
-			}
-		}(image)
+	if len(images) == 0 {
+		return nil, nil
 	}
 
-	wg.Wait()
+	// the first image will always be the "widest"
+	i, err := s.GetImage(images[0].URL)
+	if err != nil {
+		return nil, err
+	}
 
-	return imgs, errs.AsError()
+	return []edb.Image{i}, nil
 }
 
 func (s *spotifyExtractor) artistFromFullArtist(artist *spotify.FullArtist) (edb.Artist, error) {
@@ -77,7 +86,8 @@ func (s *spotifyExtractor) artistFromFullArtist(artist *spotify.FullArtist) (edb
 		return edb.Artist{}, err
 	}
 
-	extRefs := []edb.ExternalRef{edb.NewExternalRef(spotifyServiceName, string(artist.ID))}
+	extRefs := make([]edb.ExternalRef, 0)
+	extRefs = append(extRefs, edb.NewExternalRef(spotifyServiceName, string(artist.ID)))
 
 	return edb.Artist{
 		Name:   artist.Name,
@@ -88,49 +98,10 @@ func (s *spotifyExtractor) artistFromFullArtist(artist *spotify.FullArtist) (edb
 	}, nil
 }
 
-func (s *spotifyExtractor) artistsFromFullArtists(artists []*spotify.FullArtist) ([]edb.Artist, error) {
-	var mux sync.Mutex
-	var wg sync.WaitGroup
-	var errs errutils.MultiError
-
-	rawArts := make([]edb.Artist, len(artists))
-
-	wg.Add(len(artists))
-	for i, artist := range artists {
-		go func(i int, artist *spotify.FullArtist) {
-			defer wg.Done()
-
-			a, err := s.artistFromFullArtist(artist)
-			if err == nil {
-				rawArts[i] = a
-			} else {
-				mux.Lock()
-				errs = append(errs, err)
-				mux.Unlock()
-			}
-
-		}(i, artist)
-	}
-
-	wg.Wait()
-
-	err := errs.AsError()
-	if err != nil {
-		return nil, err
-	}
-
-	arts := rawArts[:0]
-	for _, a := range rawArts {
-		if !a.IsEmpty() {
-			arts = append(arts, a)
-		}
-	}
-
-	return arts, nil
-}
-
 func (s *spotifyExtractor) GetArtists(ids ...string) ([]edb.Artist, error) {
 	artists := make([]edb.Artist, len(ids))
+	// this isn't the most efficient way to do this, but we're mostly dealing
+	// with 1-2 artists so it's not all that bad.
 	for i, id := range ids {
 		var artist edb.Artist
 		found, err := edb.GetModelByExternalRef(s.db, spotifyServiceName, id, &artist)
@@ -161,7 +132,7 @@ func (s *spotifyExtractor) GetArtists(ids ...string) ([]edb.Artist, error) {
 	return artists, nil
 }
 
-func (s *spotifyExtractor) artistsFromSimpleArtists(artists []spotify.SimpleArtist) ([]edb.Artist, error) {
+func (s *spotifyExtractor) getArtistsFromSimpleArtists(artists []spotify.SimpleArtist) ([]edb.Artist, error) {
 	artistIDs := make([]string, len(artists))
 	for i, artist := range artists {
 		artistIDs[i] = string(artist.ID)
@@ -171,7 +142,7 @@ func (s *spotifyExtractor) artistsFromSimpleArtists(artists []spotify.SimpleArti
 }
 
 func (s *spotifyExtractor) albumFromFullAlbum(album *spotify.FullAlbum) (edb.Album, error) {
-	artists, err := s.artistsFromSimpleArtists(album.Artists)
+	artists, err := s.getArtistsFromSimpleArtists(album.Artists)
 	if err != nil {
 		return edb.Album{}, err
 	}
@@ -188,9 +159,8 @@ func (s *spotifyExtractor) albumFromFullAlbum(album *spotify.FullAlbum) (edb.Alb
 
 	releaseDate := album.ReleaseDateTime()
 
-	extRefs := []edb.ExternalRef{
-		edb.NewExternalRef(spotifyServiceName, string(album.ID)),
-	}
+	extRefs := s.extRefsFromIDs(album.ExternalIDs)
+	extRefs = append(extRefs, edb.NewExternalRef(spotifyServiceName, string(album.ID)))
 
 	return edb.Album{
 		Name:        album.Name,
@@ -227,7 +197,7 @@ func (s *spotifyExtractor) GetAlbum(albumID string) (edb.Album, error) {
 }
 
 func (s *spotifyExtractor) trackFromFullTrack(track *spotify.FullTrack) (edb.Track, error) {
-	artists, err := s.artistsFromSimpleArtists(track.Artists)
+	artists, err := s.getArtistsFromSimpleArtists(track.Artists)
 	if err != nil {
 		return edb.Track{}, err
 	}
@@ -247,7 +217,8 @@ func (s *spotifyExtractor) trackFromFullTrack(track *spotify.FullTrack) (edb.Tra
 		return edb.Track{}, errors.New("spotify provided negative duration")
 	}
 
-	extRefs := []edb.ExternalRef{edb.NewExternalRef(spotifyServiceName, string(track.ID))}
+	extRefs := s.extRefsFromIDs(track.ExternalIDs)
+	extRefs = append(extRefs, edb.NewExternalRef(spotifyServiceName, string(track.ID)))
 
 	return edb.Track{
 		Name:              track.Name,
@@ -273,6 +244,25 @@ func (s *spotifyExtractor) GetTrack(trackID string) (edb.Track, error) {
 	if err != nil {
 		return edb.Track{}, err
 	}
+
+	// find by other external ids
+	found, err = edb.GetModelByExternalRefs(s.db, &t, s.extRefsFromIDs(track.ExternalIDs))
+	if err != nil {
+		return edb.Track{}, err
+	} else if found {
+		// create external reference for spotify
+		err := s.db.Model(&t).
+			Association("ExternalReferences").
+			Append(edb.NewExternalRef(spotifyServiceName, string(track.ID))).
+			Error
+		if err != nil {
+			return edb.Track{}, err
+		}
+
+		return t, nil
+	}
+
+	// create new track
 
 	t, err = s.trackFromFullTrack(track)
 	if err != nil {

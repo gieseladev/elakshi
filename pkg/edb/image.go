@@ -3,7 +3,8 @@ package edb
 type Image struct {
 	DBModel
 
-	URI string
+	SourceURI string `gorm:"INDEX"`
+	URI       string
 }
 
 func (i Image) Namespace() string {

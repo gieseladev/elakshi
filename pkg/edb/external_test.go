@@ -1,25 +1,15 @@
 package edb
 
 import (
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
 
-func getDB(t *testing.T) *gorm.DB {
-	db, err := gorm.Open("sqlite3", ":memory:")
-	require.NoError(t, err)
-
-	require.NoError(t, AutoMigrate(db))
-	return db
-}
-
 func TestGetModelByExternalRef(t *testing.T) {
 	assert := assert.New(t)
 
-	db := getDB(t)
+	db := createDB(t)
 
 	track := Track{
 		Name: "B12",

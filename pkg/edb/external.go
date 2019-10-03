@@ -87,3 +87,22 @@ func GetModelsByExternalRef(db *gorm.DB, out interface{}, service string, identi
 		Where("er.service = ? AND er.identifier IN (?)", service, identifiers).
 		Find(out).Error
 }
+
+// GetModelByExternalRefs returns the first model found using one of the
+// references.
+func GetModelByExternalRefs(db *gorm.DB, out interface{}, refs []ExternalRef) (bool, error) {
+	db = db.Scopes(JoinModelExternalRef(out))
+
+	for _, ref := range refs {
+		err := db.Take(out, "er.service = ? AND er.identifier = ?", ref.Service, ref.Identifier).Error
+		if err == nil {
+			return true, nil
+		} else if gorm.IsRecordNotFoundError(err) {
+			continue
+		} else {
+			return false, err
+		}
+	}
+
+	return false, nil
+}

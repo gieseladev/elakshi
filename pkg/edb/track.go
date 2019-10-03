@@ -15,7 +15,7 @@ type Track struct {
 
 	ArtistID          *uint64
 	Artist            Artist
-	AdditionalArtists []Artist `gorm:"MANY2MANY:track_artists"`
+	AdditionalArtists []Artist `gorm:"MANY2MANY:track_additional_artists"`
 
 	AlbumID *uint64
 	Album   Album

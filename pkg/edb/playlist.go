@@ -3,18 +3,20 @@ package edb
 type PlaylistTrack struct {
 	DBModel
 
-	TrackID uint64
-	Track   Track
-	Author  uint64
+	TrackID  uint64 `gorm:"NOT NULL"`
+	Track    Track
+	AuthorID uint64 `gorm:"NOT NULL"`
 
-	PlaylistID uint64
+	PlaylistID uint64 `gorm:"INDEX;NOT NULL"`
 }
 
 type Playlist struct {
 	DBModel
 
-	Name    string
-	ImageID uint64
+	Name     string
+	AuthorID uint64 `gorm:"NOT NULL"`
+
+	ImageID *uint64
 	Image   Image
 
 	Tracks []PlaylistTrack

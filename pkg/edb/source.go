@@ -5,8 +5,8 @@ import "time"
 type AudioSource struct {
 	DBModel
 
-	Type string
-	URI  string `gorm:"UNIQUE_INDEX"`
+	Type string `gorm:"UNIQUE_INDEX:uix_uri_type;NOT NULL"`
+	URI  string `gorm:"UNIQUE_INDEX:uix_uri_type;NOT NULL"`
 
 	TrackSources []TrackSource
 }
@@ -14,8 +14,8 @@ type AudioSource struct {
 type TrackSource struct {
 	DBModel
 
-	SourceID uint64
-	TrackID  uint64
+	SourceID uint64 `gorm:"NOT NULL"`
+	TrackID  uint64 `gorm:"NOT NULL"`
 	Track    Track
 
 	StartOffsetMS uint32 `gorm:"type:integer"`
