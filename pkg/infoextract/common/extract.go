@@ -6,6 +6,9 @@ import (
 	"strings"
 )
 
+// TODO don't create genres here! Same goes for images as they're overwritten
+//  later on anyway.
+
 // GetGenresByName returns genres for the given names and creates new ones
 // for those not found.
 func GetGenresByName(db *gorm.DB, names ...string) ([]edb.Genre, error) {
@@ -39,7 +42,7 @@ func GetGenresByName(db *gorm.DB, names ...string) ([]edb.Genre, error) {
 			Name: name,
 		}
 
-		if err := db.FirstOrCreate(&genre, &genre).Error; err != nil {
+		if err := db.Create(&genre).Error; err != nil {
 			return nil, err
 		}
 

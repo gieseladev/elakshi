@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/gieseladev/elakshi/pkg/edb"
 	"github.com/gieseladev/elakshi/pkg/infoextract/common"
+	"github.com/jinzhu/gorm"
 	"google.golang.org/api/youtube/v3"
 	"strconv"
 	"strings"
@@ -11,10 +12,11 @@ import (
 )
 
 const (
-	ExtractorType = "youtube"
+	ytServiceName = "youtube"
 )
 
 type youtubeExtractor struct {
+	db      *gorm.DB
 	service *youtube.Service
 }
 
@@ -34,6 +36,7 @@ func (yt *youtubeExtractor) getVideoByID(id string) (*youtube.Video, error) {
 }
 
 func parseYTDuration(duration string) (time.Duration, error) {
+	// TODO write real iso8601 parser!
 	errInvalidFormat := errors.New("invalid format")
 
 	// len(PTnMnS) = 6
@@ -110,8 +113,60 @@ func (yt *youtubeExtractor) parseVideo(video *youtube.Video) (edb.AudioSource, e
 	}
 
 	return edb.AudioSource{
-		Type:         ExtractorType,
+		Type:         ytServiceName,
 		URI:          video.Id,
 		TrackSources: trackSources,
 	}, nil
+}
+
+// TODO use contentDetails.caption to check if a video has captions
+
+// TODO only use thumbnails as images when contentDetails.hasCustomThumbnail is
+//  true
+
+func tracksFromAudioSource(audio edb.AudioSource) []edb.Track {
+	tracks := make([]edb.Track, len(audio.TrackSources))
+	for i, source := range audio.TrackSources {
+		tracks[i] = source.Track
+	}
+
+	return tracks
+}
+
+func (yt *youtubeExtractor) GetTracks(videoID string) ([]edb.Track, error) {
+	var track edb.Track
+	found, err := edb.GetModelByExternalRef(yt.db, ytServiceName, videoID, &track)
+	if err != nil {
+		return nil, err
+	} else if found {
+		return []edb.Track{track}, nil
+	}
+
+	// find by assigned audio source
+	var audioSource edb.AudioSource
+	err = yt.db.
+		Preload("TrackSources.Track").
+		Take(&audioSource, "type = ? AND uri = ?", ytServiceName, videoID).
+		Error
+	if err == nil {
+		return tracksFromAudioSource(audioSource), nil
+	} else if !gorm.IsRecordNotFoundError(err) {
+		return nil, err
+	}
+
+	video, err := yt.getVideoByID(videoID)
+	if err != nil {
+		return nil, err
+	}
+
+	audioSource, err = yt.parseVideo(video)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := yt.db.Create(&audioSource).Error; err != nil {
+		return nil, err
+	}
+
+	return tracksFromAudioSource(audioSource), nil
 }

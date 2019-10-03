@@ -27,22 +27,6 @@ func NewExtractor(db *gorm.DB, client *spotify.Client) *spotifyExtractor {
 	return &spotifyExtractor{db: db, client: client}
 }
 
-// TODO move to common
-func (s *spotifyExtractor) GetImage(uri string) (edb.Image, error) {
-	image := edb.Image{
-		SourceURI: uri,
-	}
-
-	err := s.db.FirstOrCreate(&image, &image).Error
-	if err != nil {
-		return edb.Image{}, err
-	}
-
-	// TODO schedule download if URI is nil
-
-	return image, nil
-}
-
 func (s *spotifyExtractor) extRefsFromIDs(externalIDs map[string]string) []edb.ExternalRef {
 	var refs []edb.ExternalRef
 
@@ -59,6 +43,22 @@ func (s *spotifyExtractor) extRefsFromIDs(externalIDs map[string]string) []edb.E
 	}
 
 	return refs
+}
+
+// TODO move to common
+func (s *spotifyExtractor) GetImage(uri string) (edb.Image, error) {
+	image := edb.Image{
+		SourceURI: uri,
+	}
+
+	err := s.db.FirstOrCreate(&image, &image).Error
+	if err != nil {
+		return edb.Image{}, err
+	}
+
+	// TODO schedule download if URI is nil
+
+	return image, nil
 }
 
 func (s *spotifyExtractor) imagesFromImages(images []spotify.Image) ([]edb.Image, error) {

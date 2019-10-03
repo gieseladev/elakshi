@@ -19,6 +19,8 @@ func getDB() *gorm.DB {
 		panic(err)
 	}
 
+	db.LogMode(true)
+
 	if err := edb.AutoMigrate(db); err != nil {
 		panic(err)
 	}
