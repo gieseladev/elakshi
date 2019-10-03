@@ -13,15 +13,15 @@ type Track struct {
 	Name     string
 	LengthMS uint32 `gorm:"type:integer"`
 
-	ArtistID          uint64
+	ArtistID          *uint64
 	Artist            Artist
 	AdditionalArtists []Artist `gorm:"MANY2MANY:track_artists"`
 
-	AlbumID uint64
+	AlbumID *uint64
 	Album   Album
 
 	Images      []Image `gorm:"MANY2MANY:track_images"`
-	ReleaseDate time.Time
+	ReleaseDate *time.Time
 	Genres      []Genre `gorm:"MANY2MANY:track_genres"`
 
 	ExternalReferences []ExternalRef `gorm:"MANY2MANY:track_references"`
@@ -58,8 +58,8 @@ type Artist struct {
 	Name   string
 	Images []Image `gorm:"MANY2MANY:artist_images"`
 
-	StartDate time.Time
-	EndDate   time.Time
+	StartDate *time.Time
+	EndDate   *time.Time
 	Genres    []Genre `gorm:"MANY2MANY:artist_genres"`
 
 	ExternalReferences []ExternalRef `gorm:"MANY2MANY:artist_references"`
@@ -80,7 +80,7 @@ type Album struct {
 	Name        string
 	Artists     []Artist `gorm:"MANY2MANY:album_artists"`
 	Images      []Image  `gorm:"MANY2MANY:album_images"`
-	ReleaseDate time.Time
+	ReleaseDate *time.Time
 
 	// TODO length? Calculate dynamically or update on user change
 
@@ -98,7 +98,7 @@ type Genre struct {
 
 	Name string `gorm:"UNIQUE_INDEX:uix_genre"`
 
-	ParentID uint64 `gorm:"UNIQUE_INDEX:uix_genre"`
+	ParentID *uint64 `gorm:"UNIQUE_INDEX:uix_genre"`
 	Parent   *Genre
 }
 

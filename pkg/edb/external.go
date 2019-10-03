@@ -8,8 +8,8 @@ import (
 type ExternalRef struct {
 	ID uint64
 
-	Service    string `gorm:"UNIQUE_INDEX:uix_service_id"`
-	Identifier string `gorm:"UNIQUE_INDEX:uix_service_id"`
+	Service    string `gorm:"UNIQUE_INDEX:uix_reference_id"`
+	Identifier string `gorm:"UNIQUE_INDEX:uix_reference_id"`
 }
 
 func NewExternalRef(service, id string) ExternalRef {
@@ -20,17 +20,17 @@ func NewExternalRef(service, id string) ExternalRef {
 }
 
 const externalRefSelect = `
-SELECT * FROM %s
 INNER JOIN %s as jt
 	ON jt.%s = %s.id
 INNER JOIN external_refs as er
 	ON er.id = jt.%s
-WHERE er.service = ? AND er.identifier = ?
 `
 
-// GetModelByExternalRef returns a scope which selects rows from the given model
-// which have the given external reference.
-func GetModelByExternalRef(model interface{}, service, identifier string) func(*gorm.DB) *gorm.DB {
+// JoinModelExternalRef joins the ExternalRef rows under the alias "er".
+// The join table is also available under the alias "jt".
+// Assumes that the model stores the external references in an
+// "ExternalReferences" field.
+func JoinModelExternalRef(model interface{}) func(*gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
 		mScope := db.NewScope(model)
 		quotedTableName := mScope.QuotedTableName()
@@ -60,8 +60,30 @@ func GetModelByExternalRef(model interface{}, service, identifier string) func(*
 		joinDestKey := mScope.Quote(destKeys[0].DBName)
 		joinSourceKey := mScope.Quote(sourceKeys[0].DBName)
 
-		query := fmt.Sprintf(externalRefSelect,
-			quotedTableName, joinTableName, joinSourceKey, quotedTableName, joinDestKey)
-		return db.Raw(query, service, identifier)
+		query := fmt.Sprintf(externalRefSelect, joinTableName, joinSourceKey, quotedTableName, joinDestKey)
+		return db.Joins(query)
 	}
+}
+
+func commaOkGORMErr(err error) (bool, error) {
+	if gorm.IsRecordNotFoundError(err) {
+		return false, nil
+	}
+
+	return err == nil, err
+}
+
+// GetModelByExternalRef searches a model out based on an external reference.
+func GetModelByExternalRef(db *gorm.DB, service, identifier string, out interface{}) (bool, error) {
+	err := db.Scopes(JoinModelExternalRef(out)).
+		Where("er.service = ? AND er.identifier = ?", service, identifier).
+		Take(out).Error
+
+	return commaOkGORMErr(err)
+}
+
+func GetModelsByExternalRef(db *gorm.DB, out interface{}, service string, identifiers ...string) error {
+	return db.Scopes(JoinModelExternalRef(out)).
+		Where("er.service = ? AND er.identifier IN (?)", service, identifiers).
+		Find(out).Error
 }

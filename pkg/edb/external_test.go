@@ -31,7 +31,8 @@ func TestGetModelByExternalRef(t *testing.T) {
 	require.NoError(t, db.Create(&track).Error)
 
 	var tr Track
-	err := db.Scopes(GetModelByExternalRef(tr, "spotify", "abc")).Scan(&tr).Error
+	found, err := GetModelByExternalRef(db, "spotify", "abc", &tr)
 	assert.NoError(err)
+	assert.True(found)
 	assert.Equal(tr.Name, "B12")
 }

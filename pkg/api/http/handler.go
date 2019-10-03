@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/gieseladev/elakshi/pkg/api"
+	"github.com/gieseladev/elakshi/pkg/edb"
+	"github.com/gieseladev/elakshi/pkg/infoextract/spotify"
 	"log"
 	"net/http"
 )
@@ -77,11 +79,15 @@ func (h *httpHandler) Done() <-chan struct{} {
 }
 
 const (
+	testPath = "/test/"
+
 	trackPath  = "/track/"
 	lyricsPath = "/lyrics/"
 )
 
 func (h *httpHandler) addRoutes() {
+	h.mux.HandleFunc(testPath, h.getTest)
+
 	h.mux.HandleFunc(trackPath, h.getTrack)
 	h.mux.HandleFunc(lyricsPath, h.getLyrics)
 }
@@ -96,7 +102,7 @@ func writeJSONResponse(w http.ResponseWriter, data interface{}) error {
 func handleError(w http.ResponseWriter, err error) {
 	statusCode := 500
 	switch err {
-	case api.ErrEIDInvalid:
+	case edb.ErrEIDInvalid:
 		statusCode = 400
 	case api.ErrEIDNotFound:
 		statusCode = 404
@@ -128,6 +134,22 @@ func (h *httpHandler) getLyrics(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := writeJSONResponse(w, lyrics); err != nil {
+		panic(err)
+	}
+}
+
+func (h *httpHandler) getTest(w http.ResponseWriter, r *http.Request) {
+	trackID := r.URL.Path[len(testPath):]
+
+	s := spotify.NewExtractor(h.core.DB, h.core.SpotifyClient)
+
+	track, err := s.GetTrack(trackID)
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+
+	if err := writeJSONResponse(w, track); err != nil {
 		panic(err)
 	}
 }

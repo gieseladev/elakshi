@@ -2,13 +2,25 @@ package api
 
 import (
 	"context"
+	"github.com/gieseladev/elakshi/pkg/errutils"
 	"github.com/gieseladev/glyrics/v3/pkg/search"
 	"github.com/jinzhu/gorm"
+	"github.com/zmb3/spotify"
 )
 
+// Core contains important API fields.
 type Core struct {
 	DB             *gorm.DB
 	LyricsSearcher search.Searcher
+
+	SpotifyClient *spotify.Client
+}
+
+// Close closes the core.
+func (c *Core) Close() error {
+	return errutils.CollectErrors(
+		c.DB.Close(),
+	)
 }
 
 type coreKey struct{}
