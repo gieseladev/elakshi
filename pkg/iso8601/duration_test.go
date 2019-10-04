@@ -61,9 +61,9 @@ func TestParseDuration(t *testing.T) {
 		},
 		{
 			name: "fractions centi",
-			args: args{duration: "PT5,9S"},
+			args: args{duration: "PT,9S"},
 			wantDur: ISODuration{
-				MSeconds: 5900,
+				MSeconds: 900,
 			},
 		},
 	}
@@ -107,4 +107,21 @@ func TestISODuration_AsDuration(t *testing.T) {
 	dur := DurationFromMS(192839182)
 	d := dur.AsDuration()
 	assert.Equal(t, dur.Milliseconds(), uint64(d.Milliseconds()))
+}
+
+func TestISODuration_String(t *testing.T) {
+	dur := ISODuration{
+		MYears:   1050,
+		MMonths:  9500,
+		MDays:    1000,
+		MHours:   12500,
+		MMinutes: 3333,
+		MSeconds: 50,
+	}
+	assert.Equal(t, dur.String(), "P1.05Y9.5M1DT12.5H3.333M.05S")
+
+	dur = ISODuration{
+		MMinutes: 50000,
+	}
+	assert.Equal(t, dur.String(), "PT50M")
 }
