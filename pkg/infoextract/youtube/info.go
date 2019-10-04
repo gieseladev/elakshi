@@ -1,14 +1,11 @@
 package youtube
 
 import (
-	"errors"
 	"github.com/gieseladev/elakshi/pkg/edb"
 	"github.com/gieseladev/elakshi/pkg/infoextract/common"
+	"github.com/gieseladev/elakshi/pkg/iso8601"
 	"github.com/jinzhu/gorm"
 	"google.golang.org/api/youtube/v3"
-	"strconv"
-	"strings"
-	"time"
 )
 
 const (
@@ -35,36 +32,6 @@ func (yt *youtubeExtractor) getVideoByID(id string) (*youtube.Video, error) {
 	return result.Items[0], nil
 }
 
-func parseYTDuration(duration string) (time.Duration, error) {
-	// TODO write real iso8601 parser!
-	errInvalidFormat := errors.New("invalid format")
-
-	// len(PTnMnS) = 6
-	if len(duration) < 6 {
-		return 0, errInvalidFormat
-	}
-
-	// skip PT and remove S
-	duration = duration[2 : len(duration)-1]
-
-	mIndex := strings.IndexByte(duration, 'M')
-	if mIndex < 0 {
-		return 0, errInvalidFormat
-	}
-
-	minutes, err := strconv.ParseInt(duration[:mIndex], 10, 64)
-	if err != nil {
-		return 0, err
-	}
-
-	seconds, err := strconv.ParseInt(duration[mIndex+1:], 10, 64)
-	if err != nil {
-		return 0, err
-	}
-
-	return time.Duration(minutes)*time.Minute + time.Duration(seconds)*time.Second, nil
-}
-
 func (yt *youtubeExtractor) trackSourcesFromTracklist(tracklist string, video *youtube.Video) ([]edb.TrackSource, error) {
 	return []edb.TrackSource{}, nil
 }
@@ -85,14 +52,14 @@ func (yt *youtubeExtractor) parseVideo(video *youtube.Video) (edb.AudioSource, e
 		panic("video requires snippet, contentDetails")
 	}
 
-	videoLength, err := parseYTDuration(video.ContentDetails.Duration)
+	videoLength, err := iso8601.ParseDuration(video.ContentDetails.Duration)
 	if err != nil {
 		panic("couldn't parse iso8601 duration")
 	}
 
 	var trackSources []edb.TrackSource
 
-	tracklist := common.ExtractTracklistFromText(video.Snippet.Description, videoLength)
+	tracklist := common.ExtractTracklistFromText(video.Snippet.Description, videoLength.AsDuration())
 	if len(tracklist) > 1 {
 		// TODO pass tracklist
 		trackSources, err = yt.trackSourcesFromTracklist("", video)
