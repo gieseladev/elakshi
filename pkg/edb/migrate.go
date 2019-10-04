@@ -101,7 +101,7 @@ func autoMigrateTrack(db *gorm.DB) error {
 	}
 
 	return db.AutoMigrate(&TrackSource{}).
-		AddForeignKey("source_id", "audio_sources(id)", "CASCADE", "CASCADE").
+		AddForeignKey("audio_source_id", "audio_sources(id)", "CASCADE", "CASCADE").
 		AddForeignKey("track_id", "tracks(id)", "CASCADE", "CASCADE").
 		Error
 }

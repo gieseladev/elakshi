@@ -6,7 +6,7 @@ import (
 	"errors"
 	"github.com/gieseladev/elakshi/pkg/api"
 	"github.com/gieseladev/elakshi/pkg/edb"
-	"github.com/gieseladev/elakshi/pkg/infoextract/spotify"
+	"github.com/gieseladev/elakshi/pkg/infoextract/youtube"
 	"log"
 	"net/http"
 )
@@ -141,15 +141,15 @@ func (h *httpHandler) getLyrics(w http.ResponseWriter, r *http.Request) {
 func (h *httpHandler) getTest(w http.ResponseWriter, r *http.Request) {
 	trackID := r.URL.Path[len(testPath):]
 
-	s := spotify.NewExtractor(h.core.DB, h.core.SpotifyClient)
+	s := youtube.NewExtractor(h.core.DB, h.core.YoutubeClient)
 
-	track, err := s.GetTrack(trackID)
+	result, err := s.GetTracks(trackID)
 	if err != nil {
 		handleError(w, err)
 		return
 	}
 
-	if err := writeJSONResponse(w, track); err != nil {
+	if err := writeJSONResponse(w, result); err != nil {
 		panic(err)
 	}
 }

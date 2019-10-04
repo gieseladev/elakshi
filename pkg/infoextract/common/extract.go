@@ -51,3 +51,19 @@ func GetGenresByName(db *gorm.DB, names ...string) ([]edb.Genre, error) {
 
 	return existingGenres, nil
 }
+
+// GetImage searches for an image with the given source uri or creates a new one.
+func GetImage(db *gorm.DB, uri string) (edb.Image, error) {
+	image := edb.Image{
+		SourceURI: uri,
+	}
+
+	err := db.FirstOrCreate(&image, &image).Error
+	if err != nil {
+		return edb.Image{}, err
+	}
+
+	// TODO schedule download if URI is nil
+
+	return image, nil
+}

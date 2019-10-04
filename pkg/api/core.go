@@ -6,6 +6,7 @@ import (
 	"github.com/gieseladev/glyrics/v3/pkg/search"
 	"github.com/jinzhu/gorm"
 	"github.com/zmb3/spotify"
+	"google.golang.org/api/youtube/v3"
 )
 
 // Core contains important API fields.
@@ -13,6 +14,7 @@ type Core struct {
 	DB             *gorm.DB
 	LyricsSearcher search.Searcher
 
+	YoutubeClient *youtube.Service
 	SpotifyClient *spotify.Client
 }
 

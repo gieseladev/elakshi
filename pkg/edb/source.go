@@ -14,9 +14,9 @@ type AudioSource struct {
 type TrackSource struct {
 	DBModel
 
-	SourceID uint64 `gorm:"NOT NULL"`
-	TrackID  uint64 `gorm:"NOT NULL"`
-	Track    Track
+	AudioSourceID uint64 `gorm:"NOT NULL"`
+	TrackID       uint64 `gorm:"NOT NULL"`
+	Track         Track
 
 	StartOffsetMS uint32 `gorm:"type:integer"`
 	EndOffsetMS   uint32 `gorm:"type:integer"`
