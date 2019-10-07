@@ -3,6 +3,7 @@ module github.com/gieseladev/elakshi
 go 1.12
 
 require (
+	github.com/gammazero/nexus/v3 v3.0.0
 	github.com/gieseladev/glyrics/v3 v3.1.1
 	github.com/jinzhu/gorm v1.9.11
 	github.com/kr/pretty v0.1.0 // indirect
