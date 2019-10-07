@@ -3,7 +3,7 @@ package youtube
 import (
 	"errors"
 	"github.com/gieseladev/elakshi/pkg/edb"
-	"github.com/gieseladev/elakshi/pkg/infoextract/common"
+	"github.com/gieseladev/elakshi/pkg/infoextract"
 	"github.com/gieseladev/elakshi/pkg/iso8601"
 	"github.com/jinzhu/gorm"
 	"google.golang.org/api/youtube/v3"
@@ -89,7 +89,7 @@ func (yt *youtubeExtractor) getArtist(video *youtube.Video) (edb.Artist, error) 
 	var images []edb.Image
 	thumbnail := extractHighestResThumbnail(channel.Snippet.Thumbnails)
 	if thumbnail != nil {
-		img, err := common.GetImage(yt.db, thumbnail.Url)
+		img, err := infoextract.GetImage(yt.db, thumbnail.Url)
 		if err != nil {
 			return edb.Artist{}, err
 		}
@@ -122,7 +122,7 @@ func (yt *youtubeExtractor) trackFromVideo(video *youtube.Video) (edb.Track, err
 	var images []edb.Image
 	thumbnail := extractHighestResThumbnail(video.Snippet.Thumbnails)
 	if thumbnail != nil {
-		image, err := common.GetImage(yt.db, thumbnail.Url)
+		image, err := infoextract.GetImage(yt.db, thumbnail.Url)
 		if err != nil {
 			return edb.Track{}, err
 		}
@@ -138,8 +138,6 @@ func (yt *youtubeExtractor) trackFromVideo(video *youtube.Video) (edb.Track, err
 		LengthMS: uint32(duration.Milliseconds()),
 		Artist:   artist,
 		Images:   images,
-		// TODO use published at iso8601 date
-		ReleaseDate: nil,
 
 		ExternalReferences: []edb.ExternalRef{edb.NewExternalRef(ytServiceName, video.Id)},
 	}, nil
@@ -153,7 +151,7 @@ func (yt *youtubeExtractor) parseVideo(video *youtube.Video) (edb.AudioSource, e
 
 	var trackSources []edb.TrackSource
 
-	tracklist := common.ExtractTracklistFromText(video.Snippet.Description, videoLength.AsDuration())
+	tracklist := infoextract.ExtractTracklistFromText(video.Snippet.Description, videoLength.AsDuration())
 	if len(tracklist) > 1 {
 		// TODO pass tracklist
 		trackSources, err = yt.trackSourcesFromTracklist("", video)

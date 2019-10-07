@@ -1,11 +1,12 @@
-package errutils
+package errutil
 
 import (
 	"fmt"
 	"strings"
 )
 
-// MultiError is an error which contains multiple errors within it.
+// MultiError is a slice of errors which itself implements the Error interface.
+// A MultiError may contain nil errors.
 type MultiError []error
 
 // Normalize removes all instances of nil from the MultiError and flattens

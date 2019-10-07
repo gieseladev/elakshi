@@ -14,13 +14,13 @@ var (
 	ErrEIDNotFound = errors.New("eid was not found")
 )
 
-func GetTrack(db *gorm.DB, eid string) (edb.Track, error) {
+func (c *Core) GetTrack(eid string) (edb.Track, error) {
 	trackID, err := edb.DecodeEID(eid)
 	if err != nil {
 		return edb.Track{}, err
 	}
 
-	track, err := edb.GetTrack(db, trackID)
+	track, err := edb.GetTrack(c.DB, trackID)
 	if err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			err = ErrEIDNotFound
@@ -60,18 +60,13 @@ var (
 
 // GetTrackLyrics retrieves lyrics for the track with the given EID.
 // The context must contain the api core.
-func GetTrackLyrics(ctx context.Context, eid string) (edb.Lyrics, error) {
+func (c *Core) GetTrackLyrics(ctx context.Context, eid string) (edb.Lyrics, error) {
 	trackID, err := edb.DecodeEID(eid)
 	if err != nil {
 		return edb.Lyrics{}, err
 	}
 
-	core := CoreFromContext(ctx)
-	if core == nil {
-		return edb.Lyrics{}, errors.New("context without api core passed")
-	}
-
-	lyrics, err := edb.GetTrackLyrics(core.DB, trackID)
+	lyrics, err := edb.GetTrackLyrics(c.DB, trackID)
 	if err == nil {
 		return lyrics, nil
 	} else if !gorm.IsRecordNotFoundError(err) {
@@ -79,12 +74,12 @@ func GetTrackLyrics(ctx context.Context, eid string) (edb.Lyrics, error) {
 	}
 
 	var track edb.Track
-	if err := core.DB.Preload("Artist").Take(&track).Error; err != nil {
+	if err := c.DB.Preload("Artist").Take(&track).Error; err != nil {
 		return edb.Lyrics{}, err
 	}
 
-	if lyrics, ok := findLyrics(ctx, core.LyricsSearcher, track); ok {
-		core.DB.Create(&lyrics)
+	if lyrics, ok := findLyrics(ctx, c.LyricsSearcher, track); ok {
+		c.DB.Create(&lyrics)
 		return lyrics, nil
 	}
 

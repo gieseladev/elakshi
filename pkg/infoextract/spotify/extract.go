@@ -3,7 +3,7 @@ package spotify
 import (
 	"errors"
 	"github.com/gieseladev/elakshi/pkg/edb"
-	"github.com/gieseladev/elakshi/pkg/infoextract/common"
+	"github.com/gieseladev/elakshi/pkg/infoextract"
 	"github.com/jinzhu/gorm"
 	"github.com/zmb3/spotify"
 )
@@ -81,7 +81,7 @@ func (s *spotifyExtractor) artistFromFullArtist(artist *spotify.FullArtist) (edb
 		return edb.Artist{}, err
 	}
 
-	genres, err := common.GetGenresByName(s.db, artist.Genres...)
+	genres, err := infoextract.GetGenresByName(s.db, artist.Genres...)
 	if err != nil {
 		return edb.Artist{}, err
 	}
@@ -152,7 +152,7 @@ func (s *spotifyExtractor) albumFromFullAlbum(album *spotify.FullAlbum) (edb.Alb
 		return edb.Album{}, err
 	}
 
-	genres, err := common.GetGenresByName(s.db, album.Genres...)
+	genres, err := infoextract.GetGenresByName(s.db, album.Genres...)
 	if err != nil {
 		return edb.Album{}, err
 	}

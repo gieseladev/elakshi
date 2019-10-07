@@ -1,4 +1,4 @@
-package common
+package infoextract
 
 import (
 	"github.com/gieseladev/elakshi/pkg/edb"

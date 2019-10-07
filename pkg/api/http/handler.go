@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	sentryhttp "github.com/getsentry/sentry-go/http"
 	"github.com/gieseladev/elakshi/pkg/api"
 	"github.com/gieseladev/elakshi/pkg/edb"
 	"github.com/gieseladev/elakshi/pkg/infoextract/youtube"
@@ -18,6 +19,8 @@ type httpHandler struct {
 	srv *http.Server
 	mux *http.ServeMux
 
+	sentryHandler *sentryhttp.Handler
+
 	done    chan struct{}
 	started bool
 }
@@ -25,7 +28,7 @@ type httpHandler struct {
 func NewHTTPHandler(ctx context.Context, addr string) *httpHandler {
 	core := api.CoreFromContext(ctx)
 	if core == nil {
-		panic("context without core passed")
+		panic("api/http: passed context without api core")
 	}
 
 	mux := http.NewServeMux()
@@ -34,11 +37,14 @@ func NewHTTPHandler(ctx context.Context, addr string) *httpHandler {
 		Handler: mux,
 	}
 
+	sentryHandler := sentryhttp.New(sentryhttp.Options{})
+
 	return &httpHandler{
 		ctx:  ctx,
 		core: core,
 		srv:  srv, mux: mux,
-		done: make(chan struct{}),
+		sentryHandler: sentryHandler,
+		done:          make(chan struct{}),
 	}
 }
 
@@ -86,10 +92,12 @@ const (
 )
 
 func (h *httpHandler) addRoutes() {
+	s := h.sentryHandler
+
 	h.mux.HandleFunc(testPath, h.getTest)
 
-	h.mux.HandleFunc(trackPath, h.getTrack)
-	h.mux.HandleFunc(lyricsPath, h.getLyrics)
+	h.mux.HandleFunc(trackPath, s.HandleFunc(h.getTrack))
+	h.mux.HandleFunc(lyricsPath, s.HandleFunc(h.getLyrics))
 }
 
 // writeJSONResponse writes json encoded data into the http response writer and
@@ -114,7 +122,7 @@ func handleError(w http.ResponseWriter, err error) {
 
 func (h *httpHandler) getTrack(w http.ResponseWriter, r *http.Request) {
 	eid := r.URL.Path[len(trackPath):]
-	track, err := api.GetTrack(h.core.DB, eid)
+	track, err := h.core.GetTrack(eid)
 	if err != nil {
 		handleError(w, err)
 		return
@@ -127,7 +135,7 @@ func (h *httpHandler) getTrack(w http.ResponseWriter, r *http.Request) {
 
 func (h *httpHandler) getLyrics(w http.ResponseWriter, r *http.Request) {
 	eid := r.URL.Path[len(lyricsPath):]
-	lyrics, err := api.GetTrackLyrics(api.WithCore(r.Context(), h.core), eid)
+	lyrics, err := h.core.GetTrackLyrics(r.Context(), eid)
 	if err != nil {
 		handleError(w, err)
 		return

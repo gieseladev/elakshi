@@ -2,7 +2,7 @@ package api
 
 import (
 	"context"
-	"github.com/gieseladev/elakshi/pkg/errutils"
+	"github.com/gieseladev/elakshi/pkg/errutil"
 	"github.com/gieseladev/glyrics/v3/pkg/search"
 	"github.com/jinzhu/gorm"
 	"github.com/zmb3/spotify"
@@ -20,7 +20,7 @@ type Core struct {
 
 // Close closes the core.
 func (c *Core) Close() error {
-	return errutils.CollectErrors(
+	return errutil.CollectErrors(
 		c.DB.Close(),
 	)
 }

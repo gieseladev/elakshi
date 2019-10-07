@@ -2,7 +2,7 @@ package edb
 
 import (
 	"fmt"
-	"github.com/gieseladev/elakshi/pkg/errutils"
+	"github.com/gieseladev/elakshi/pkg/errutil"
 	"github.com/jinzhu/gorm"
 	"reflect"
 )
@@ -55,7 +55,7 @@ func autoMigrateArtist(db *gorm.DB) error {
 		return err
 	}
 
-	return errutils.CollectErrors(
+	return errutil.CollectErrors(
 		m2mConstraint(db, &Artist{}, "Genres"),
 		m2mConstraint(db, &Artist{}, "Images"),
 		m2mConstraint(db, &Artist{}, "ExternalReferences"),
@@ -68,7 +68,7 @@ func autoMigrateAlbum(db *gorm.DB) error {
 		return err
 	}
 
-	return errutils.CollectErrors(
+	return errutil.CollectErrors(
 		m2mConstraint(db, &Album{}, "Artists"),
 		m2mConstraint(db, &Album{}, "Genres"),
 		m2mConstraint(db, &Album{}, "Images"),
@@ -86,7 +86,7 @@ func autoMigrateTrack(db *gorm.DB) error {
 		return err
 	}
 
-	err = errutils.CollectErrors(
+	err = errutil.CollectErrors(
 		m2mConstraint(db, &Track{}, "AdditionalArtists"),
 		m2mConstraint(db, &Track{}, "Genres"),
 		m2mConstraint(db, &Track{}, "Images"),
@@ -132,7 +132,7 @@ func autoMigrateRadio(db *gorm.DB) error {
 }
 
 func AutoMigrate(db *gorm.DB) error {
-	err := errutils.CollectErrors(
+	err := errutil.CollectErrors(
 		db.AutoMigrate(&Genre{}).
 			AddForeignKey("parent_id", "genres(id)", "SET NULL", "CASCADE").
 			Error,
@@ -145,7 +145,7 @@ func AutoMigrate(db *gorm.DB) error {
 		return err
 	}
 
-	err = errutils.CollectErrors(
+	err = errutil.CollectErrors(
 		autoMigrateArtist(db),
 		autoMigrateAlbum(db),
 	)
@@ -153,7 +153,7 @@ func AutoMigrate(db *gorm.DB) error {
 		return err
 	}
 
-	err = errutils.CollectErrors(
+	err = errutil.CollectErrors(
 		autoMigrateRadio(db),
 		autoMigrateTrack(db),
 	)
@@ -161,7 +161,7 @@ func AutoMigrate(db *gorm.DB) error {
 		return err
 	}
 
-	return errutils.CollectErrors(
+	return errutil.CollectErrors(
 		autoMigratePlaylist(db),
 		db.AutoMigrate(&Lyrics{}).
 			AddForeignKey("track_id", "tracks(id)", "CASCADE", "CASCADE").
