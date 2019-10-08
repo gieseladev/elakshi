@@ -5,6 +5,10 @@ import (
 	"github.com/jinzhu/gorm"
 )
 
+// TODO use multiple external reference tables for each entity.
+//		This solves some rather unfortunate many-to-many issues and should
+//		also speed-up the query.
+
 type ExternalRef struct {
 	ID uint64
 

@@ -13,9 +13,6 @@ const (
 	spotifyServiceName = "spotify"
 )
 
-// TODO use other external references (other than spotify id) to search for
-//  	entities.
-
 // TODO tracks should also resolve cross references in the form of title - artist
 // 		or title - album.
 
@@ -46,29 +43,13 @@ func (s *spotifyExtractor) extRefsFromIDs(externalIDs map[string]string) []edb.E
 	return refs
 }
 
-// TODO move to common
-func (s *spotifyExtractor) GetImage(uri string) (edb.Image, error) {
-	image := edb.Image{
-		SourceURI: uri,
-	}
-
-	err := s.db.FirstOrCreate(&image, &image).Error
-	if err != nil {
-		return edb.Image{}, err
-	}
-
-	// TODO schedule download if URI is nil
-
-	return image, nil
-}
-
 func (s *spotifyExtractor) imagesFromImages(images []spotify.Image) ([]edb.Image, error) {
 	if len(images) == 0 {
 		return nil, nil
 	}
 
 	// the first image will always be the "widest"
-	i, err := s.GetImage(images[0].URL)
+	i, err := infoextract.GetImage(s.db, images[0].URL)
 	if err != nil {
 		return nil, err
 	}
