@@ -1,6 +1,7 @@
 package spotify
 
 import (
+	"context"
 	"errors"
 	"github.com/gieseladev/elakshi/pkg/edb"
 	"github.com/gieseladev/elakshi/pkg/infoextract"
@@ -98,7 +99,7 @@ func (s *spotifyExtractor) artistFromFullArtist(artist *spotify.FullArtist) (edb
 	}, nil
 }
 
-func (s *spotifyExtractor) GetArtists(ids ...string) ([]edb.Artist, error) {
+func (s *spotifyExtractor) GetArtists(ctx context.Context, ids ...string) ([]edb.Artist, error) {
 	artists := make([]edb.Artist, len(ids))
 	// this isn't the most efficient way to do this, but we're mostly dealing
 	// with 1-2 artists so it's not all that bad.
@@ -112,6 +113,9 @@ func (s *spotifyExtractor) GetArtists(ids ...string) ([]edb.Artist, error) {
 		if !found {
 			a, err := s.client.GetArtist(spotify.ID(id))
 			if err != nil {
+				return nil, err
+			}
+			if err := ctx.Err(); err != nil {
 				return nil, err
 			}
 
@@ -132,17 +136,17 @@ func (s *spotifyExtractor) GetArtists(ids ...string) ([]edb.Artist, error) {
 	return artists, nil
 }
 
-func (s *spotifyExtractor) getArtistsFromSimpleArtists(artists []spotify.SimpleArtist) ([]edb.Artist, error) {
+func (s *spotifyExtractor) getArtistsFromSimpleArtists(ctx context.Context, artists []spotify.SimpleArtist) ([]edb.Artist, error) {
 	artistIDs := make([]string, len(artists))
 	for i, artist := range artists {
 		artistIDs[i] = string(artist.ID)
 	}
 
-	return s.GetArtists(artistIDs...)
+	return s.GetArtists(ctx, artistIDs...)
 }
 
-func (s *spotifyExtractor) albumFromFullAlbum(album *spotify.FullAlbum) (edb.Album, error) {
-	artists, err := s.getArtistsFromSimpleArtists(album.Artists)
+func (s *spotifyExtractor) albumFromFullAlbum(ctx context.Context, album *spotify.FullAlbum) (edb.Album, error) {
+	artists, err := s.getArtistsFromSimpleArtists(ctx, album.Artists)
 	if err != nil {
 		return edb.Album{}, err
 	}
@@ -173,7 +177,7 @@ func (s *spotifyExtractor) albumFromFullAlbum(album *spotify.FullAlbum) (edb.Alb
 	}, nil
 }
 
-func (s *spotifyExtractor) GetAlbum(albumID string) (edb.Album, error) {
+func (s *spotifyExtractor) GetAlbum(ctx context.Context, albumID string) (edb.Album, error) {
 	var a edb.Album
 	found, err := edb.GetModelByExternalRef(s.db, spotifyServiceName, albumID, &a)
 	if err != nil {
@@ -186,8 +190,11 @@ func (s *spotifyExtractor) GetAlbum(albumID string) (edb.Album, error) {
 	if err != nil {
 		return edb.Album{}, err
 	}
+	if err := ctx.Err(); err != nil {
+		return edb.Album{}, err
+	}
 
-	a, err = s.albumFromFullAlbum(album)
+	a, err = s.albumFromFullAlbum(ctx, album)
 	if err != nil {
 		return edb.Album{}, err
 	}
@@ -196,8 +203,8 @@ func (s *spotifyExtractor) GetAlbum(albumID string) (edb.Album, error) {
 	return a, err
 }
 
-func (s *spotifyExtractor) trackFromFullTrack(track *spotify.FullTrack) (edb.Track, error) {
-	artists, err := s.getArtistsFromSimpleArtists(track.Artists)
+func (s *spotifyExtractor) trackFromFullTrack(ctx context.Context, track *spotify.FullTrack) (edb.Track, error) {
+	artists, err := s.getArtistsFromSimpleArtists(ctx, track.Artists)
 	if err != nil {
 		return edb.Track{}, err
 	}
@@ -208,7 +215,7 @@ func (s *spotifyExtractor) trackFromFullTrack(track *spotify.FullTrack) (edb.Tra
 		artists = artists[1:]
 	}
 
-	album, err := s.GetAlbum(string(track.Album.ID))
+	album, err := s.GetAlbum(ctx, string(track.Album.ID))
 	if err != nil {
 		return edb.Track{}, err
 	}
@@ -231,7 +238,7 @@ func (s *spotifyExtractor) trackFromFullTrack(track *spotify.FullTrack) (edb.Tra
 	}, nil
 }
 
-func (s *spotifyExtractor) GetTrack(trackID string) (edb.Track, error) {
+func (s *spotifyExtractor) GetTrack(ctx context.Context, trackID string) (edb.Track, error) {
 	var t edb.Track
 	found, err := edb.GetModelByExternalRef(s.db, spotifyServiceName, trackID, &t)
 	if err != nil {
@@ -242,6 +249,9 @@ func (s *spotifyExtractor) GetTrack(trackID string) (edb.Track, error) {
 
 	track, err := s.client.GetTrack(spotify.ID(trackID))
 	if err != nil {
+		return edb.Track{}, err
+	}
+	if err := ctx.Err(); err != nil {
 		return edb.Track{}, err
 	}
 
@@ -264,7 +274,7 @@ func (s *spotifyExtractor) GetTrack(trackID string) (edb.Track, error) {
 
 	// create new track
 
-	t, err = s.trackFromFullTrack(track)
+	t, err = s.trackFromFullTrack(ctx, track)
 	if err != nil {
 		return edb.Track{}, err
 	}

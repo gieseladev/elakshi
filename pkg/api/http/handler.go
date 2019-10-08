@@ -7,7 +7,6 @@ import (
 	sentryhttp "github.com/getsentry/sentry-go/http"
 	"github.com/gieseladev/elakshi/pkg/api"
 	"github.com/gieseladev/elakshi/pkg/edb"
-	"github.com/gieseladev/elakshi/pkg/infoextract/youtube"
 	"log"
 	"net/http"
 )
@@ -85,16 +84,12 @@ func (h *httpHandler) Done() <-chan struct{} {
 }
 
 const (
-	testPath = "/test/"
-
 	trackPath  = "/track/"
 	lyricsPath = "/lyrics/"
 )
 
 func (h *httpHandler) addRoutes() {
 	s := h.sentryHandler
-
-	h.mux.HandleFunc(testPath, h.getTest)
 
 	h.mux.HandleFunc(trackPath, s.HandleFunc(h.getTrack))
 	h.mux.HandleFunc(lyricsPath, s.HandleFunc(h.getLyrics))
@@ -142,22 +137,6 @@ func (h *httpHandler) getLyrics(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := writeJSONResponse(w, lyrics); err != nil {
-		panic(err)
-	}
-}
-
-func (h *httpHandler) getTest(w http.ResponseWriter, r *http.Request) {
-	trackID := r.URL.Path[len(testPath):]
-
-	s := youtube.NewExtractor(h.core.DB, h.core.YoutubeClient)
-
-	result, err := s.GetTracks(trackID)
-	if err != nil {
-		handleError(w, err)
-		return
-	}
-
-	if err := writeJSONResponse(w, result); err != nil {
 		panic(err)
 	}
 }

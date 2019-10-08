@@ -7,6 +7,7 @@ import (
 	"github.com/getsentry/sentry-go"
 	"github.com/gieseladev/elakshi/pkg/api"
 	"github.com/gieseladev/elakshi/pkg/errutil"
+	"github.com/gieseladev/elakshi/pkg/infoextract"
 	"log"
 )
 
@@ -65,7 +66,7 @@ func handleError(err error) client.InvokeResult {
 }
 
 func (s *wampHandler) get(ctx context.Context, invocation *wamp.Invocation) client.InvokeResult {
-	eid, ok := GetEID(invocation.Arguments, 0)
+	eid, ok := GetStrArg(invocation.Arguments, 0)
 	if !ok {
 		return EIDMissingResult()
 	}
@@ -79,5 +80,22 @@ func (s *wampHandler) get(ctx context.Context, invocation *wamp.Invocation) clie
 }
 
 func (s *wampHandler) resolve(ctx context.Context, invocation *wamp.Invocation) client.InvokeResult {
-	return client.InvokeResult{}
+	uri, ok := GetStrArg(invocation.Arguments, 0)
+	if !ok {
+		return InvalidArgumentResult("uri missing")
+	}
+
+	extractor, ok := s.core.ExtractorPool.ResolveExtractor(uri)
+	if !ok {
+		return InvalidArgumentResult("no extractor for uri")
+	}
+
+	res, err := extractor.Extract(ctx, uri)
+	if err == infoextract.ErrURIInvalid {
+		return InvalidArgumentResult("uri invalid")
+	} else if err != nil {
+		return handleError(err)
+	}
+
+	return SingleValueResult(res)
 }

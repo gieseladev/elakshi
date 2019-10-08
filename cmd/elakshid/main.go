@@ -7,6 +7,7 @@ import (
 	"github.com/gieseladev/elakshi/pkg/api/http"
 	"github.com/gieseladev/elakshi/pkg/api/wamp"
 	"github.com/gieseladev/elakshi/pkg/edb"
+	"github.com/gieseladev/elakshi/pkg/infoextract"
 	"github.com/gieseladev/elakshi/pkg/infoextract/spotify"
 	"github.com/gieseladev/elakshi/pkg/infoextract/youtube"
 	"github.com/gieseladev/glyrics/v3/pkg/search"
@@ -31,24 +32,36 @@ func getDB() *gorm.DB {
 	return db
 }
 
-func getCore() *api.Core {
-	lyricsSearcher := &search.Google{
-		APIKey: os.Getenv("GOOGLE_API_KEY"),
-	}
+func getExtractorPool(db *gorm.DB) *infoextract.ExtractorPool {
+	pool := &infoextract.ExtractorPool{}
 
 	youtubeClient, err := youtube.NewClient(context.Background(), os.Getenv("YOUTUBE_API_KEY"))
+	if err != nil {
+		panic(err)
+	}
+	pool.AddExtractors(youtube.NewExtractor(db, youtubeClient))
 
 	spotifyClient, err := spotify.NewClient(context.Background(), os.Getenv("SPOTIFY_ID"), os.Getenv("SPOTIFY_SECRET"))
 	if err != nil {
 		panic(err)
 	}
+	pool.AddExtractors(spotify.NewExtractor(db, spotifyClient))
+
+	return pool
+}
+
+func getCore() *api.Core {
+	lyricsSearcher := &search.Google{
+		APIKey: os.Getenv("GOOGLE_API_KEY"),
+	}
+
+	db := getDB()
 
 	return &api.Core{
-		DB:             getDB(),
+		DB:             db,
 		LyricsSearcher: lyricsSearcher,
 
-		YoutubeClient: youtubeClient,
-		SpotifyClient: spotifyClient,
+		ExtractorPool: getExtractorPool(db),
 	}
 }
 

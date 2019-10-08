@@ -1,11 +1,16 @@
 package infoextract
 
-import "context"
+import (
+	"context"
+	"errors"
+)
+
+var (
+	ErrURIInvalid = errors.New("uri invalid")
+)
 
 type Extractor interface {
 	ExtractorID() string
 
-	CanExtract(ctx context.Context, uri string) (bool, error)
-
-	Extract(ctx context.Context, uri string) error
+	Extract(ctx context.Context, uri string) (interface{}, error)
 }

@@ -1,6 +1,7 @@
 package youtube
 
 import (
+	"context"
 	"errors"
 	"github.com/gieseladev/elakshi/pkg/edb"
 	"github.com/gieseladev/elakshi/pkg/infoextract"
@@ -12,8 +13,6 @@ import (
 const (
 	ytServiceName = "youtube"
 )
-
-// TODO use context
 
 func extractHighestResThumbnail(d *youtube.ThumbnailDetails) *youtube.Thumbnail {
 	if t := d.Maxres; t != nil {
@@ -32,45 +31,57 @@ func extractHighestResThumbnail(d *youtube.ThumbnailDetails) *youtube.Thumbnail 
 	return d.Default
 }
 
+func tracksFromAudioSource(audio edb.AudioSource) []edb.Track {
+	tracks := make([]edb.Track, len(audio.TrackSources))
+	for i, source := range audio.TrackSources {
+		tracks[i] = source.Track
+	}
+
+	return tracks
+}
+
 type youtubeExtractor struct {
 	db      *gorm.DB
 	service *youtube.Service
 }
 
-func NewExtractor(db *gorm.DB, service *youtube.Service) *youtubeExtractor {
-	return &youtubeExtractor{
-		db:      db,
-		service: service,
-	}
-}
+var (
+	ErrIDInvalid = errors.New("id invalid")
+)
 
-func (yt *youtubeExtractor) getChannelByID(id string) (*youtube.Channel, error) {
-	result, err := yt.service.Channels.List("snippet").Id(id).Do()
+func (yt *youtubeExtractor) getChannelByID(ctx context.Context, id string) (*youtube.Channel, error) {
+	result, err := yt.service.Channels.
+		List("snippet").
+		Id(id).
+		Context(ctx).Do()
 	if err != nil {
 		return nil, err
 	}
 
 	if len(result.Items) == 0 {
-		return nil, errors.New("no channel with the given id")
+		return nil, ErrIDInvalid
 	}
 
 	return result.Items[0], nil
 }
 
-func (yt *youtubeExtractor) getVideoByID(id string) (*youtube.Video, error) {
-	result, err := yt.service.Videos.List("contentDetails,snippet").Id(id).Do()
+func (yt *youtubeExtractor) getVideoByID(ctx context.Context, id string) (*youtube.Video, error) {
+	result, err := yt.service.Videos.
+		List("contentDetails,snippet").
+		Id(id).
+		Context(ctx).Do()
 	if err != nil {
 		return nil, err
 	}
 
 	if len(result.Items) == 0 {
-		return nil, errors.New("no video with given id")
+		return nil, ErrIDInvalid
 	}
 
 	return result.Items[0], nil
 }
 
-func (yt *youtubeExtractor) getArtist(video *youtube.Video) (edb.Artist, error) {
+func (yt *youtubeExtractor) getArtist(ctx context.Context, video *youtube.Video) (edb.Artist, error) {
 	channelID := video.Snippet.ChannelId
 
 	var artist edb.Artist
@@ -81,7 +92,7 @@ func (yt *youtubeExtractor) getArtist(video *youtube.Video) (edb.Artist, error) 
 		return artist, nil
 	}
 
-	channel, err := yt.getChannelByID(channelID)
+	channel, err := yt.getChannelByID(ctx, channelID)
 	if err != nil {
 		return edb.Artist{}, err
 	}
@@ -108,8 +119,8 @@ func (yt *youtubeExtractor) trackSourcesFromTracklist(tracklist string, video *y
 	return []edb.TrackSource{}, nil
 }
 
-func (yt *youtubeExtractor) trackFromVideo(video *youtube.Video) (edb.Track, error) {
-	artist, err := yt.getArtist(video)
+func (yt *youtubeExtractor) trackFromVideo(ctx context.Context, video *youtube.Video) (edb.Track, error) {
+	artist, err := yt.getArtist(ctx, video)
 	if err != nil {
 		return edb.Track{}, err
 	}
@@ -143,7 +154,7 @@ func (yt *youtubeExtractor) trackFromVideo(video *youtube.Video) (edb.Track, err
 	}, nil
 }
 
-func (yt *youtubeExtractor) parseVideo(video *youtube.Video) (edb.AudioSource, error) {
+func (yt *youtubeExtractor) parseVideo(ctx context.Context, video *youtube.Video) (edb.AudioSource, error) {
 	videoLength, err := iso8601.ParseDuration(video.ContentDetails.Duration)
 	if err != nil {
 		return edb.AudioSource{}, err
@@ -159,7 +170,7 @@ func (yt *youtubeExtractor) parseVideo(video *youtube.Video) (edb.AudioSource, e
 			return edb.AudioSource{}, nil
 		}
 	} else {
-		track, err := yt.trackFromVideo(video)
+		track, err := yt.trackFromVideo(ctx, video)
 		if err != nil {
 			return edb.AudioSource{}, nil
 		}
@@ -178,16 +189,7 @@ func (yt *youtubeExtractor) parseVideo(video *youtube.Video) (edb.AudioSource, e
 	}, nil
 }
 
-func tracksFromAudioSource(audio edb.AudioSource) []edb.Track {
-	tracks := make([]edb.Track, len(audio.TrackSources))
-	for i, source := range audio.TrackSources {
-		tracks[i] = source.Track
-	}
-
-	return tracks
-}
-
-func (yt *youtubeExtractor) GetTracks(videoID string) ([]edb.Track, error) {
+func (yt *youtubeExtractor) GetTracks(ctx context.Context, videoID string) ([]edb.Track, error) {
 	var track edb.Track
 	found, err := edb.GetModelByExternalRef(yt.db, ytServiceName, videoID, &track)
 	if err != nil {
@@ -208,12 +210,12 @@ func (yt *youtubeExtractor) GetTracks(videoID string) ([]edb.Track, error) {
 		return nil, err
 	}
 
-	video, err := yt.getVideoByID(videoID)
+	video, err := yt.getVideoByID(ctx, videoID)
 	if err != nil {
 		return nil, err
 	}
 
-	audioSource, err = yt.parseVideo(video)
+	audioSource, err = yt.parseVideo(ctx, video)
 	if err != nil {
 		return nil, err
 	}
@@ -223,4 +225,11 @@ func (yt *youtubeExtractor) GetTracks(videoID string) ([]edb.Track, error) {
 	}
 
 	return tracksFromAudioSource(audioSource), nil
+}
+
+func NewExtractor(db *gorm.DB, service *youtube.Service) *youtubeExtractor {
+	return &youtubeExtractor{
+		db:      db,
+		service: service,
+	}
 }
