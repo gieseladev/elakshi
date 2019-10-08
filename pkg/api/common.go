@@ -79,8 +79,8 @@ func (c *Core) GetTrackLyrics(ctx context.Context, eid string) (edb.Lyrics, erro
 	}
 
 	if lyrics, ok := findLyrics(ctx, c.LyricsSearcher, track); ok {
-		c.DB.Create(&lyrics)
-		return lyrics, nil
+		err := c.DB.Create(&lyrics).Error
+		return lyrics, err
 	}
 
 	return edb.Lyrics{}, ErrLyricsNotFound

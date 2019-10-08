@@ -2,6 +2,7 @@ package edb
 
 import "time"
 
+// DBModel contains common fields shared by most Elakshi models.
 type DBModel struct {
 	ID        uint64 `gorm:"primary_key"`
 	CreatedAt *time.Time

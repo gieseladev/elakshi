@@ -8,7 +8,7 @@ import (
 	"github.com/jinzhu/gorm"
 )
 
-// Core contains important API fields.
+// Core contains important data shared between the handlers.
 type Core struct {
 	DB             *gorm.DB
 	LyricsSearcher search.Searcher

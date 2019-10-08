@@ -20,15 +20,6 @@ type Handler interface {
 
 type handlerSlice []Handler
 
-// CollectHandlers creates a new handler from the given handlers.
-func CollectHandlers(handlers ...Handler) Handler {
-	if len(handlers) == 1 {
-		return handlers[0]
-	}
-
-	return handlerSlice(handlers)
-}
-
 func (h handlerSlice) forEach(f func(Handler) error) error {
 	for _, handler := range h {
 		if err := f(handler); err != nil {
@@ -59,4 +50,13 @@ func (h handlerSlice) Done() <-chan struct{} {
 	}()
 
 	return done
+}
+
+// CollectHandlers creates a new handler from the given handlers.
+func CollectHandlers(handlers ...Handler) Handler {
+	if len(handlers) == 1 {
+		return handlers[0]
+	}
+
+	return handlerSlice(handlers)
 }

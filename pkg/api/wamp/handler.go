@@ -16,6 +16,8 @@ type wampHandler struct {
 	c    *client.Client
 }
 
+// NewWAMPHandler creates a new api.Handler which provides interaction over WAMP.
+// ctx must contain an API core, otherwise the function panics.
 func NewWAMPHandler(ctx context.Context, c *client.Client) *wampHandler {
 	core := api.CoreFromContext(ctx)
 	if core == nil {
@@ -68,7 +70,7 @@ func handleError(err error) client.InvokeResult {
 func (s *wampHandler) get(ctx context.Context, invocation *wamp.Invocation) client.InvokeResult {
 	eid, ok := GetStrArg(invocation.Arguments, 0)
 	if !ok {
-		return EIDMissingResult()
+		return InvalidArgumentResult("EID missing")
 	}
 
 	track, err := s.core.GetTrack(eid)
@@ -97,5 +99,10 @@ func (s *wampHandler) resolve(ctx context.Context, invocation *wamp.Invocation) 
 		return handleError(err)
 	}
 
-	return SingleValueResult(res)
+	resp, err := api.CreateResolveResponse(res)
+	if err != nil {
+		return handleError(err)
+	}
+
+	return SingleValueResult(resp)
 }
