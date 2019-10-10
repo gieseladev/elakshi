@@ -27,6 +27,9 @@ import (
 // 		These can then implement all interfaces without having to do the awkward
 //		client sharing.
 
+// TODO when finding an audio source which already contains a track spanning
+//  the entire duration, link the tracks!
+
 func getDB() *gorm.DB {
 	db, err := gorm.Open("postgres", "user=postgres sslmode=disable")
 	if err != nil {
