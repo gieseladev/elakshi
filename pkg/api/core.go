@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"github.com/gieseladev/elakshi/pkg/audiosrc"
 	"github.com/gieseladev/elakshi/pkg/errutil"
 	"github.com/gieseladev/elakshi/pkg/infoextract"
 	"github.com/gieseladev/glyrics/v3/pkg/search"
@@ -13,7 +14,8 @@ type Core struct {
 	DB             *gorm.DB
 	LyricsSearcher search.Searcher
 
-	ExtractorPool *infoextract.ExtractorPool
+	ExtractorPool     *infoextract.ExtractorPool
+	TrackSourceFinder *audiosrc.Finder
 }
 
 // Close closes the core.

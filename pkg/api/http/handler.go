@@ -84,8 +84,9 @@ func (h *httpHandler) Done() <-chan struct{} {
 }
 
 const (
-	trackPath  = "/track/"
-	lyricsPath = "/lyrics/"
+	trackPath       = "/track/"
+	lyricsPath      = "/lyrics/"
+	audioSourcePath = "/audiosrc/"
 )
 
 func (h *httpHandler) addRoutes() {
@@ -93,6 +94,7 @@ func (h *httpHandler) addRoutes() {
 
 	h.mux.HandleFunc(trackPath, s.HandleFunc(h.getTrack))
 	h.mux.HandleFunc(lyricsPath, s.HandleFunc(h.getLyrics))
+	h.mux.HandleFunc(audioSourcePath, s.HandleFunc(h.getAudioSource))
 }
 
 // writeJSONResponse writes json encoded data into the http response writer and
@@ -137,6 +139,19 @@ func (h *httpHandler) getLyrics(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := writeJSONResponse(w, lyrics); err != nil {
+		panic(err)
+	}
+}
+
+func (h *httpHandler) getAudioSource(w http.ResponseWriter, r *http.Request) {
+	eid := r.URL.Path[len(audioSourcePath):]
+	resp, err := h.core.GetTrackSource(r.Context(), eid)
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+
+	if err := writeJSONResponse(w, resp); err != nil {
 		panic(err)
 	}
 }

@@ -85,3 +85,18 @@ func (c *Core) GetTrackLyrics(ctx context.Context, eid string) (edb.Lyrics, erro
 
 	return edb.Lyrics{}, ErrLyricsNotFound
 }
+
+func (c *Core) GetTrackSource(ctx context.Context, eid string) (AudioSourceResp, error) {
+	trackID, err := edb.DecodeEID(eid)
+	if err != nil {
+		return AudioSourceResp{}, err
+	}
+
+	trackSource, err := c.TrackSourceFinder.GetTrackSource(ctx, trackID)
+
+	if err != nil {
+		return AudioSourceResp{}, err
+	}
+
+	return AudioSourceRespFromTrackSource(trackSource), nil
+}

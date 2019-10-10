@@ -93,6 +93,18 @@ func (a Album) Namespace() string {
 	return "album"
 }
 
+// GetAlbumLengthMS returns the total length of all tracks in an album.
+func GetAlbumLengthMS(db *gorm.DB, albumID uint64) (uint64, error) {
+	var lengthMS uint64
+	err := db.Model(Track{}).
+		Where("album_id = ?", albumID).
+		Select("sum(length_ms)").
+		Scan(&lengthMS).
+		Error
+
+	return lengthMS, err
+}
+
 type Genre struct {
 	DBModel
 

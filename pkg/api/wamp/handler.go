@@ -34,6 +34,7 @@ func (s *wampHandler) registerProcedures() error {
 	return errutil.CollectErrors(
 		s.c.Register("io.giesela.elakshi.get", s.get, wamp.Dict{}),
 		s.c.Register("io.giesela.elakshi.resolve", s.resolve, wamp.Dict{}),
+		s.c.Register("io.giesela.elakshi.get_audio_source", s.getAudio, wamp.Dict{}),
 	)
 }
 
@@ -105,4 +106,18 @@ func (s *wampHandler) resolve(ctx context.Context, invocation *wamp.Invocation) 
 	}
 
 	return SingleValueResult(resp)
+}
+
+func (s *wampHandler) getAudio(ctx context.Context, invocation *wamp.Invocation) client.InvokeResult {
+	eid, ok := GetStrArg(invocation.Arguments, 0)
+	if !ok {
+		return InvalidArgumentResult("EID missing")
+	}
+
+	source, err := s.core.GetTrackSource(ctx, eid)
+	if err != nil {
+		return handleError(err)
+	}
+
+	return SingleValueResult(source)
 }

@@ -84,6 +84,8 @@ func (yt *youtubeExtractor) getVideoByID(ctx context.Context, id string) (*youtu
 func (yt *youtubeExtractor) getArtist(ctx context.Context, video *youtube.Video) (edb.Artist, error) {
 	channelID := video.Snippet.ChannelId
 
+	// TODO don't use artist if channel name isn't contained in the video!
+
 	var artist edb.Artist
 	found, err := edb.GetModelByExternalRef(yt.db, ytServiceName, channelID, &artist)
 	if err != nil {
@@ -115,7 +117,7 @@ func (yt *youtubeExtractor) getArtist(ctx context.Context, video *youtube.Video)
 	}, nil
 }
 
-func (yt *youtubeExtractor) trackSourcesFromTracklist(tracklist string, video *youtube.Video) ([]edb.TrackSource, error) {
+func (yt *youtubeExtractor) trackSourcesFromTracklist(tracklist interface{}, video *youtube.Video) ([]edb.TrackSource, error) {
 	return []edb.TrackSource{}, nil
 }
 
@@ -162,10 +164,12 @@ func (yt *youtubeExtractor) parseVideo(ctx context.Context, video *youtube.Video
 
 	var trackSources []edb.TrackSource
 
-	tracklist := infoextract.ExtractTracklistFromText(video.Snippet.Description, videoLength.AsDuration())
+	// TODO get tracklist from library!
+	var tracklist []interface{}
 	if len(tracklist) > 1 {
 		// TODO pass tracklist
-		trackSources, err = yt.trackSourcesFromTracklist("", video)
+		_ = videoLength // let's keep videoLength for now
+		trackSources, err = yt.trackSourcesFromTracklist(nil, video)
 		if err != nil {
 			return edb.AudioSource{}, nil
 		}
