@@ -7,25 +7,16 @@ import (
 	"github.com/gieseladev/elakshi/pkg/api/http"
 	"github.com/gieseladev/elakshi/pkg/api/wamp"
 	"github.com/gieseladev/elakshi/pkg/audiosrc"
-	ytsearch "github.com/gieseladev/elakshi/pkg/audiosrc/youtube"
 	"github.com/gieseladev/elakshi/pkg/edb"
 	"github.com/gieseladev/elakshi/pkg/infoextract"
-	"github.com/gieseladev/elakshi/pkg/infoextract/spotify"
-	ytinfo "github.com/gieseladev/elakshi/pkg/infoextract/youtube"
+	"github.com/gieseladev/elakshi/pkg/services/spotify"
+	"github.com/gieseladev/elakshi/pkg/services/youtube"
 	"github.com/gieseladev/glyrics/v3/pkg/search"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
-	"google.golang.org/api/youtube/v3"
 	"log"
 	"os"
-	"sync"
 )
-
-// TODO move service libraries to separate services package!
-//		/services/youtube
-//		/services/spotify
-// 		These can then implement all interfaces without having to do the awkward
-//		client sharing.
 
 // TODO when finding an audio source which already contains a track spanning
 //  the entire duration, link the tracks!
@@ -45,42 +36,23 @@ func getDB() *gorm.DB {
 	return db
 }
 
-var ytMux sync.Mutex
-var ytClient *youtube.Service
+func getExtractorPool(db *gorm.DB) (*infoextract.ExtractorPool, *audiosrc.Finder) {
+	ctx := context.Background()
 
-func getYoutubeClient() *youtube.Service {
-	ytMux.Lock()
-	defer ytMux.Unlock()
-
-	if ytClient == nil {
-		youtubeClient, err := ytinfo.NewClient(context.Background(), os.Getenv("YOUTUBE_API_KEY"))
-		if err != nil {
-			panic(err)
-		}
-		ytClient = youtubeClient
-	}
-
-	return ytClient
-}
-
-func getExtractorPool(db *gorm.DB) *infoextract.ExtractorPool {
-	pool := &infoextract.ExtractorPool{}
-
-	pool.AddExtractors(ytinfo.NewExtractor(db, getYoutubeClient()))
-
-	spotifyClient, err := spotify.NewClient(context.Background(), os.Getenv("SPOTIFY_ID"), os.Getenv("SPOTIFY_SECRET"))
+	yt, err := youtube.FromAPIKey(ctx, db, os.Getenv("YOUTUBE_API_KEY"))
 	if err != nil {
 		panic(err)
 	}
-	pool.AddExtractors(spotify.NewExtractor(db, spotifyClient))
 
-	return pool
-}
+	spotifyService, err := spotify.FromToken(ctx, db, os.Getenv("SPOTIFY_ID"), os.Getenv("SPOTIFY_SECRET"))
+	if err != nil {
+		panic(err)
+	}
 
-func getFinder(db *gorm.DB) *audiosrc.Finder {
-	ytSearcher := ytsearch.New(getYoutubeClient())
+	pool := &infoextract.ExtractorPool{}
+	pool.AddExtractors(yt, spotifyService)
 
-	return audiosrc.NewFinder(db, ytSearcher)
+	return pool, audiosrc.NewFinder(db, yt)
 }
 
 func getCore() *api.Core {
@@ -90,12 +62,14 @@ func getCore() *api.Core {
 
 	db := getDB()
 
+	extractorPool, sourceFinder := getExtractorPool(db)
+
 	return &api.Core{
 		DB:             db,
 		LyricsSearcher: lyricsSearcher,
 
-		ExtractorPool:     getExtractorPool(db),
-		TrackSourceFinder: getFinder(db),
+		ExtractorPool:     extractorPool,
+		TrackSourceFinder: sourceFinder,
 	}
 }
 

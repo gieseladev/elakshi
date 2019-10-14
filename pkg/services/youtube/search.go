@@ -36,16 +36,8 @@ const (
 	minLikeRatio = 50
 )
 
-type youtubeSearcher struct {
-	c *youtube.Service
-}
-
-func New(client *youtube.Service) *youtubeSearcher {
-	return &youtubeSearcher{c: client}
-}
-
-func (yt *youtubeSearcher) getSearchResultsByQuery(ctx context.Context, query string) ([]*youtube.SearchResult, error) {
-	resp, err := yt.c.Search.
+func (yt *youtubeService) getSearchResultsByQuery(ctx context.Context, query string) ([]*youtube.SearchResult, error) {
+	resp, err := yt.service.Search.
 		List("snippet").
 		Context(ctx).
 		Type("video").
@@ -59,8 +51,8 @@ func (yt *youtubeSearcher) getSearchResultsByQuery(ctx context.Context, query st
 	return resp.Items, nil
 }
 
-func (yt *youtubeSearcher) getVideosByID(ctx context.Context, videoIDs ...string) ([]*youtube.Video, error) {
-	resp, err := yt.c.Videos.
+func (yt *youtubeService) getVideosByID(ctx context.Context, videoIDs ...string) ([]*youtube.Video, error) {
+	resp, err := yt.service.Videos.
 		List("contentDetails,statistics").
 		Context(ctx).
 		Id(strings.Join(videoIDs, ",")).
@@ -91,7 +83,7 @@ type scoredResult struct {
 	VideoDurationMS uint64
 }
 
-func (yt *youtubeSearcher) basicSearch(ctx context.Context, track edb.Track) ([]scoredResult, error) {
+func (yt *youtubeService) basicSearch(ctx context.Context, track edb.Track) ([]scoredResult, error) {
 	var query string
 	if track.ArtistID != nil {
 		query = track.Artist.Name + " - " + track.Name
@@ -200,7 +192,7 @@ func (yt *youtubeSearcher) basicSearch(ctx context.Context, track edb.Track) ([]
 	return relevantResults, nil
 }
 
-func (yt *youtubeSearcher) buildResults(track edb.Track, relevantResults []scoredResult) []audiosrc.Result {
+func (yt *youtubeService) buildResults(track edb.Track, relevantResults []scoredResult) []audiosrc.Result {
 	results := make([]audiosrc.Result, len(relevantResults))
 
 	for i, res := range relevantResults {
@@ -210,7 +202,7 @@ func (yt *youtubeSearcher) buildResults(track edb.Track, relevantResults []score
 			EndOffsetMS:   uint32(res.VideoDurationMS),
 
 			AudioSource: &edb.AudioSource{
-				Type: "youtube",
+				Type: ytServiceName,
 				URI:  res.VideoID,
 			},
 		}
@@ -221,7 +213,7 @@ func (yt *youtubeSearcher) buildResults(track edb.Track, relevantResults []score
 	return results
 }
 
-func (yt *youtubeSearcher) Search(ctx context.Context, track edb.Track) ([]audiosrc.Result, error) {
+func (yt *youtubeService) Search(ctx context.Context, track edb.Track) ([]audiosrc.Result, error) {
 	// TODO use external references to find youtube video
 
 	relevantResults, err := yt.basicSearch(ctx, track)
