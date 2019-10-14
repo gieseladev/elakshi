@@ -2,46 +2,62 @@ package stringcmp
 
 import (
 	"strings"
-	"unicode"
 )
 
-// TODO maybe replace non-letters with spaces
+var letterLowerMapper = ChainMapper(ReplaceNonLettersWithSpaceMapper(), LowerMapper())
 
-// RemoveNonLetters removes all runes which aren't unicode letters.
-func RemoveNonLetters(s string) string {
-	prevIsSpace := false
-
-	return strings.Map(func(r rune) rune {
-		if unicode.IsLetter(r) || unicode.IsNumber(r) {
-			prevIsSpace = false
-			return r
-		} else if !prevIsSpace && unicode.IsSpace(r) {
-			prevIsSpace = true
-			return ' '
-		}
-
-		return -1
-	}, s)
+// GetWordsFocusedString prepares a string in a manner which makes it useful for
+// word by word comparisons.
+func GetWordsFocusedString(s string) string {
+	return strings.Map(letterLowerMapper, s)
 }
 
-func ContainsAnyOf(text string, substrs ...string) (bool, string) {
-	for _, s := range substrs {
-		if strings.Contains(text, s) {
-			return true, s
+// ContainsWords checks whether the given substring is contained in s.
+// The check ignores spaces within the substring, as long as it is surrounded by
+// either spaces or word ends.
+func ContainsWords(s, substring string) bool {
+	substring = strings.Map(RemoveNonLettersMapper(), substring)
+
+	words := strings.Fields(s)
+	for i, word := range words {
+		missing := substring
+		for strings.HasPrefix(missing, word) {
+			missing = missing[len(word):]
+			if missing == "" {
+				return true
+			}
+
+			i++
+			if i == len(words) {
+				break
+			}
+
+			word = words[i]
 		}
 	}
 
-	return false, ""
+	return false
 }
 
-func ContainsWords(text, words string) bool {
-	return strings.Contains(RemoveNonLetters(text), RemoveNonLetters(words))
+// ContainsAnyOf checks if the given text contains any of the provided
+// substrings. It returns the substring that matched or the empty string if
+// none matched.
+func ContainsAnyOf(text string, substrs ...string) string {
+	for _, s := range substrs {
+		if strings.Contains(text, s) {
+			return s
+		}
+	}
+
+	return ""
 }
 
+// WordsContainedInAny checks whether the given string is contained in any of
+// the provided strings.
 func WordsContainedInAny(words string, texts ...string) bool {
-	words = RemoveNonLetters(words)
+	words = GetWordsFocusedString(words)
 	for _, text := range texts {
-		if strings.Contains(RemoveNonLetters(text), words) {
+		if strings.Contains(GetWordsFocusedString(text), words) {
 			return true
 		}
 	}
