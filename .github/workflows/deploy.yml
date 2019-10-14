@@ -1,0 +1,36 @@
+name: Test and Deploy
+on: [push]
+
+jobs:
+  checks:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+
+      - name: run
+        uses: cedrickring/golang-action@1.4.1
+        env:
+          GO111MODULE: on
+
+  docker:
+    name: Dockerize
+    needs: checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+
+      - name: Dockerize
+        uses: manusa/actions-publish-docker@master
+        with:
+          name: gieseladev/elakshi
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+      - name: Update Docker Hub Description
+        uses: peter-evans/dockerhub-description@v2.1.0
+        env:
+          DOCKERHUB_REPOSITORY: gieseladev/elakshi
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
