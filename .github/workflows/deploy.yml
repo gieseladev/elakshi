@@ -22,6 +22,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v1
 
+      - run: cp ./build/package/Dockerfile ./
+
       - name: Dockerize
         uses: manusa/actions-publish-docker@master
         with:
