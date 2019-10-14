@@ -5,27 +5,32 @@ import (
 	"errors"
 	"github.com/gieseladev/elakshi/pkg/edb"
 	"github.com/gieseladev/elakshi/pkg/infoextract"
-	"github.com/jinzhu/gorm"
 	"github.com/zmb3/spotify"
 )
 
-const (
-	spotifyServiceName = "spotify"
-)
-
-// TODO tracks should also resolve cross references in the form of title - artist
-// 		or title - album.
-
-type spotifyExtractor struct {
-	db     *gorm.DB
-	client *spotify.Client
+func (s *spotifyService) ExtractorID() string {
+	return spotifyServiceName
 }
 
-func NewExtractor(db *gorm.DB, client *spotify.Client) *spotifyExtractor {
-	return &spotifyExtractor{db: db, client: client}
+func (s *spotifyService) Extract(ctx context.Context, uri string) (interface{}, error) {
+	typ, id, err := parseURI(uri)
+	if err == ErrInvalidSpotifyURI {
+		return nil, infoextract.ErrURIInvalid
+	} else if err != nil {
+		return nil, err
+	}
+
+	switch typ {
+	case "track":
+		// TODO handle spotify 404 errors and resolve to uri invalid or something
+		return s.GetTrack(ctx, id)
+	default:
+		// TODO global invalid "type" error
+		return nil, infoextract.ErrURIInvalid
+	}
 }
 
-func (s *spotifyExtractor) extRefsFromIDs(externalIDs map[string]string) []edb.ExternalRef {
+func (s *spotifyService) extRefsFromIDs(externalIDs map[string]string) []edb.ExternalRef {
 	var refs []edb.ExternalRef
 
 	if isrc, ok := externalIDs["isrc"]; ok {
@@ -43,7 +48,7 @@ func (s *spotifyExtractor) extRefsFromIDs(externalIDs map[string]string) []edb.E
 	return refs
 }
 
-func (s *spotifyExtractor) imagesFromImages(images []spotify.Image) ([]edb.Image, error) {
+func (s *spotifyService) imagesFromImages(images []spotify.Image) ([]edb.Image, error) {
 	if len(images) == 0 {
 		return nil, nil
 	}
@@ -57,7 +62,7 @@ func (s *spotifyExtractor) imagesFromImages(images []spotify.Image) ([]edb.Image
 	return []edb.Image{i}, nil
 }
 
-func (s *spotifyExtractor) artistFromFullArtist(artist *spotify.FullArtist) (edb.Artist, error) {
+func (s *spotifyService) artistFromFullArtist(artist *spotify.FullArtist) (edb.Artist, error) {
 	images, err := s.imagesFromImages(artist.Images)
 	if err != nil {
 		return edb.Artist{}, err
@@ -80,7 +85,7 @@ func (s *spotifyExtractor) artistFromFullArtist(artist *spotify.FullArtist) (edb
 	}, nil
 }
 
-func (s *spotifyExtractor) GetArtists(ctx context.Context, ids ...string) ([]edb.Artist, error) {
+func (s *spotifyService) GetArtists(ctx context.Context, ids ...string) ([]edb.Artist, error) {
 	artists := make([]edb.Artist, len(ids))
 	// this isn't the most efficient way to do this, but we're mostly dealing
 	// with 1-2 artists so it's not all that bad.
@@ -117,7 +122,7 @@ func (s *spotifyExtractor) GetArtists(ctx context.Context, ids ...string) ([]edb
 	return artists, nil
 }
 
-func (s *spotifyExtractor) getArtistsFromSimpleArtists(ctx context.Context, artists []spotify.SimpleArtist) ([]edb.Artist, error) {
+func (s *spotifyService) getArtistsFromSimpleArtists(ctx context.Context, artists []spotify.SimpleArtist) ([]edb.Artist, error) {
 	artistIDs := make([]string, len(artists))
 	for i, artist := range artists {
 		artistIDs[i] = string(artist.ID)
@@ -126,7 +131,7 @@ func (s *spotifyExtractor) getArtistsFromSimpleArtists(ctx context.Context, arti
 	return s.GetArtists(ctx, artistIDs...)
 }
 
-func (s *spotifyExtractor) albumFromFullAlbum(ctx context.Context, album *spotify.FullAlbum) (edb.Album, error) {
+func (s *spotifyService) albumFromFullAlbum(ctx context.Context, album *spotify.FullAlbum) (edb.Album, error) {
 	artists, err := s.getArtistsFromSimpleArtists(ctx, album.Artists)
 	if err != nil {
 		return edb.Album{}, err
@@ -158,7 +163,7 @@ func (s *spotifyExtractor) albumFromFullAlbum(ctx context.Context, album *spotif
 	}, nil
 }
 
-func (s *spotifyExtractor) GetAlbum(ctx context.Context, albumID string) (edb.Album, error) {
+func (s *spotifyService) GetAlbum(ctx context.Context, albumID string) (edb.Album, error) {
 	var a edb.Album
 	found, err := edb.GetModelByExternalRef(s.db, spotifyServiceName, albumID, &a)
 	if err != nil {
@@ -184,7 +189,7 @@ func (s *spotifyExtractor) GetAlbum(ctx context.Context, albumID string) (edb.Al
 	return a, err
 }
 
-func (s *spotifyExtractor) trackFromFullTrack(ctx context.Context, track *spotify.FullTrack) (edb.Track, error) {
+func (s *spotifyService) trackFromFullTrack(ctx context.Context, track *spotify.FullTrack) (edb.Track, error) {
 	artists, err := s.getArtistsFromSimpleArtists(ctx, track.Artists)
 	if err != nil {
 		return edb.Track{}, err
@@ -219,7 +224,7 @@ func (s *spotifyExtractor) trackFromFullTrack(ctx context.Context, track *spotif
 	}, nil
 }
 
-func (s *spotifyExtractor) GetTrack(ctx context.Context, trackID string) (edb.Track, error) {
+func (s *spotifyService) GetTrack(ctx context.Context, trackID string) (edb.Track, error) {
 	var t edb.Track
 	found, err := edb.GetModelByExternalRef(s.db, spotifyServiceName, trackID, &t)
 	if err != nil {

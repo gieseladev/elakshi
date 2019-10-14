@@ -38,11 +38,11 @@ func parseURI(uri string) (typ string, id string, err error) {
 	return
 }
 
-func (s *spotifyExtractor) URLHostnames() []string {
+func (s *spotifyService) URLHostnames() []string {
 	return []string{"open.spotify.com"}
 }
 
-func (s *spotifyExtractor) CheckURI(uri string) bool {
+func (s *spotifyService) CheckURI(uri string) bool {
 	if !strings.HasPrefix(uri, "spotify:") {
 		return false
 	}
