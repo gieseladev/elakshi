@@ -88,15 +88,14 @@ func (s *wampHandler) resolve(ctx context.Context, invocation *wamp.Invocation) 
 		return InvalidArgumentResult("uri missing")
 	}
 
-	extractor, ok := s.core.ExtractorPool.ResolveExtractor(uri)
-	if !ok {
+	res, err := s.core.ResolveURI(ctx, uri)
+	switch err {
+	case api.ErrNoExtractorForURI:
 		return InvalidArgumentResult("no extractor for uri")
-	}
-
-	res, err := extractor.Extract(ctx, uri)
-	if err == infoextract.ErrURIInvalid {
+	case infoextract.ErrURIInvalid:
 		return InvalidArgumentResult("uri invalid")
-	} else if err != nil {
+	case nil:
+	default:
 		return handleError(err)
 	}
 

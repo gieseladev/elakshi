@@ -11,7 +11,8 @@ import (
 )
 
 var (
-	ErrEIDNotFound = errors.New("eid was not found")
+	ErrEIDNotFound       = errors.New("eid was not found")
+	ErrNoExtractorForURI = errors.New("no extractor for uri found")
 )
 
 func (c *Core) GetTrack(eid string) (edb.Track, error) {
@@ -99,4 +100,13 @@ func (c *Core) GetTrackSource(ctx context.Context, eid string) (AudioSourceResp,
 	}
 
 	return AudioSourceRespFromTrackSource(trackSource), nil
+}
+
+func (c *Core) ResolveURI(ctx context.Context, uri string) (interface{}, error) {
+	extractor, ok := c.ExtractorPool.ResolveExtractor(uri)
+	if !ok {
+		return nil, ErrNoExtractorForURI
+	}
+
+	return extractor.Extract(ctx, uri)
 }
