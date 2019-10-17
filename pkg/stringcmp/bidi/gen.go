@@ -135,7 +135,7 @@ func main() {
 
 	f.HeaderComment(fmt.Sprintf(
 		"Code generated at %s! DO NOT EDIT.",
-		time.Now().Format(time.RFC3339),
+		time.Now().UTC().Format(time.Stamp),
 	))
 	f.HeaderComment("//go:generate go run gen.go")
 

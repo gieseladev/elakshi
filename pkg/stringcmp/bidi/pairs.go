@@ -1,4 +1,4 @@
-// Code generated at 2019-10-16T23:10:24+02:00! DO NOT EDIT.
+// Code generated at Oct 17 22:30:55! DO NOT EDIT.
 //go:generate go run gen.go
 
 package bidi
