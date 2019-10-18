@@ -48,10 +48,8 @@ func bracketGroupMatches(s string) []bracketMatch {
 	return matches
 }
 
-func splitBracketGroupContent(s string, start, end int, matches []bracketMatch) []string {
+func splitBracketGroupContent(s string, start, end int, matches []bracketMatch, parts []string) {
 	var between strings.Builder
-	// reserve slot for "between"
-	parts := make([]string, 1, len(matches)+1)
 
 	prevCl := start - 1
 
@@ -73,23 +71,27 @@ func splitBracketGroupContent(s string, start, end int, matches []bracketMatch) 
 		children := matches[i+1 : childrenEnd]
 		if len(children) == 0 {
 			// no children, trivial
-			parts = append(parts, s[pmOp+1:pmCl])
+			parts[i+1] = s[pmOp+1 : pmCl]
 			i++
 			continue
 		}
 
-		cParts := splitBracketGroupContent(s, pmOp+1, pmCl, children)
-		parts = append(parts, cParts...)
+		splitBracketGroupContent(s, pmOp+1, pmCl, children, parts[i+1:childrenEnd+1])
 
 		i = childrenEnd
 	}
 
 	between.WriteString(s[prevCl+1 : end])
 	parts[0] = between.String()
-
-	return parts
 }
 
+// SplitBracketGroupContent extracts the contents in brackets and returns them
+// separately.
+// The first element is always the contents not located in brackets.
+// The remaining elements are sorted by their starting bracket position.
+//
+// The content of brackets within other brackets is extracted separately and
+// excluded from the parent brackets (ex: "(a (b))" will yield ["", "a ", "b"]).
 func SplitBracketGroupContent(s string) []string {
 	matches := bracketGroupMatches(s)
 	switch len(matches) {
@@ -105,5 +107,8 @@ func SplitBracketGroupContent(s string) []string {
 		}
 	}
 
-	return splitBracketGroupContent(s, 0, len(s), matches)
+	parts := make([]string, len(matches)+1)
+	splitBracketGroupContent(s, 0, len(s), matches, parts)
+
+	return parts
 }

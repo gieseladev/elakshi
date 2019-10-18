@@ -24,3 +24,11 @@ func TestSplitBracketGroupContent(t *testing.T) {
 		SplitBracketGroupContent("5 * [2 * (1 + 2) + (3 / 5)]"),
 	)
 }
+
+func BenchmarkSplitBracketGroupContent(b *testing.B) {
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		_ = SplitBracketGroupContent("5 * [2 * (1 + 2) + (3 / 5)]")
+	}
+}
