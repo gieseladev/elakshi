@@ -6,6 +6,7 @@ import (
 	"github.com/gieseladev/elakshi/pkg/audiosrc"
 	"github.com/gieseladev/elakshi/pkg/edb"
 	"github.com/gieseladev/elakshi/pkg/iso8601"
+	"github.com/gieseladev/elakshi/pkg/lazy"
 	"github.com/gieseladev/elakshi/pkg/stringcmp"
 	"google.golang.org/api/youtube/v3"
 	"html"
@@ -16,7 +17,7 @@ import (
 )
 
 // TODO
-//		- Interpret track names and search for separate parts.
+//		- Interpret track names and search for separate parts. (partially done)
 
 const (
 	// minTitleScorePercentage is the required percentage of explained runes in
@@ -83,6 +84,143 @@ type scoredResult struct {
 	VideoDurationMS uint64
 }
 
+func strContainedSurroundedInAnyOfL(substr string, strLs ...lazy.StringL) bool {
+	for _, strL := range strLs {
+		if stringcmp.ContainsSurrounded(strL(), substr) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func scoreSearchResult(track edb.Track, sr *youtube.SearchResult) (scoredResult, bool) {
+	res := scoredResult{
+		VideoID: sr.Id.VideoId,
+		Result:  sr,
+	}
+
+	snippet := sr.Snippet
+	// we don't want to accept live streams here.
+	if snippet.LiveBroadcastContent != "none" {
+		return res, false
+	}
+
+	// TODO interpret buzzwords in titles. Let's create a separate library
+	//      for this, since it seems rather common.
+	//	    especially ["official video", "original mix", "original"]
+	//	    and probably more are implied when they're absent. Hence they
+	//		ought to be removed from video titles.
+	//		If they're also part of the track title, they need to be
+	//		removed from it as well.
+	//		"ft." / "feat." ought to be detected as well.
+
+	// YouTube deliberately returns html escaped strings.
+	// See: https://issuetracker.google.com/u/1/issues/128673539
+	videoTitle := html.UnescapeString(snippet.Title)
+
+	cleanVideoTitle := stringcmp.GetWordsFocusedString(videoTitle)
+	cleanTrackName := stringcmp.GetWordsFocusedString(track.Name)
+
+	cleanChannelTitleL := lazy.StringFunc(func() string {
+		return stringcmp.GetWordsFocusedString(
+			html.UnescapeString(snippet.ChannelTitle))
+	})
+
+	cleanDescriptionL := lazy.StringFunc(func() string {
+		return stringcmp.GetWordsFocusedString(
+			html.UnescapeString(snippet.Description))
+	})
+
+	// We track the amount of runes we can reasonably explain the presence
+	// of in the title. We can then use the percentage of "explainable"
+	// runes to score a result.
+	explainedRunes := 0
+
+	// if the video title doesn't contain the track's name ignore it!
+	if stringcmp.ContainsSurroundedIgnoreSpace(cleanVideoTitle, cleanTrackName) {
+		explainedRunes += utf8.RuneCountInString(cleanTrackName)
+	} else {
+		trackNameParts := stringcmp.SplitParts(track.Name)
+		for _, part := range trackNameParts {
+			// TODO find "important parts" which must be contained in the title!
+			// 	 Baseline (text outside of brackets) should be important.
+			//	 There can be multiple baseline parts though. Only one has to
+			//	 part of the video title.
+
+			part = stringcmp.GetWordsFocusedString(part)
+
+			switch {
+			case stringcmp.ContainsSurrounded(cleanVideoTitle, part):
+				explainedRunes += utf8.RuneCountInString(part)
+			// the title might contain additional artists which may be part of
+			// the channel title.
+			// Other parts can be part of the description as well.
+			case strContainedSurroundedInAnyOfL(part,
+				cleanDescriptionL, cleanChannelTitleL):
+			default:
+				// if we can't find all parts, reject result
+				return res, false
+			}
+		}
+	}
+
+	if track.ArtistID != nil {
+		cleanArtistName := stringcmp.GetWordsFocusedString(track.Artist.Name)
+
+		switch {
+		case stringcmp.ContainsSurrounded(cleanVideoTitle, cleanArtistName):
+			explainedRunes += utf8.RuneCountInString(cleanArtistName)
+		case strContainedSurroundedInAnyOfL(cleanArtistName,
+			cleanChannelTitleL, cleanDescriptionL):
+		default:
+			// if we can't find the artist, ignore the result entirely!
+			return res, false
+		}
+	} else {
+		// TODO what if no artist?
+	}
+
+	// Check for multiple artists and remove them from title.
+	foundMultipleArtists := false
+	for _, artist := range track.AdditionalArtists {
+		cleanArtistName := stringcmp.GetWordsFocusedString(artist.Name)
+		// we're not searching the description / channel title here because
+		// we don't actually care whether the additional artists are there or
+		// not. We're just trying to explain the title!
+		if stringcmp.ContainsSurrounded(cleanVideoTitle, cleanArtistName) {
+			// allow a space between artist and title
+			explainedRunes += utf8.RuneCountInString(cleanArtistName) + 1
+			foundMultipleArtists = true
+		}
+	}
+
+	// if we found multiple artists we can explain the "ft.".
+	if foundMultipleArtists {
+		word := stringcmp.ContainsAnyOf(videoTitle, "feat.", "ft.", "featuring")
+		if word != "" {
+			// allow 2 spaces to the side of the "ft."
+			explainedRunes += utf8.RuneCountInString(word) + 2
+		}
+	}
+
+	// explain the album name in the title.
+	if track.AlbumID != nil {
+		cleanAlbumName := stringcmp.GetWordsFocusedString(track.Album.Name)
+		if stringcmp.ContainsSurrounded(cleanVideoTitle, cleanAlbumName) {
+			// allow 1 space
+			explainedRunes += utf8.RuneCountInString(cleanAlbumName) + 1
+		}
+	}
+
+	res.TitleScore = 100 * explainedRunes / utf8.RuneCountInString(cleanVideoTitle)
+	if res.TitleScore <= minTitleScorePercentage {
+		return res, false
+	}
+
+	return res, true
+}
+
 func (yt *youtubeService) basicSearch(ctx context.Context, track edb.Track) ([]scoredResult, error) {
 	var query string
 	if track.ArtistID != nil {
@@ -97,87 +235,10 @@ func (yt *youtubeService) basicSearch(ctx context.Context, track edb.Track) ([]s
 	}
 
 	var relevantResults []scoredResult
-
-	for _, res := range searchResults {
-		snippet := res.Snippet
-		// we don't want to accept live streams here.
-		if snippet.LiveBroadcastContent != "none" {
-			continue
+	for _, sr := range searchResults {
+		if res, ok := scoreSearchResult(track, sr); ok {
+			relevantResults = append(relevantResults, res)
 		}
-
-		// TODO remove buzzwords from titles. Let's create a separate library
-		//  for this, since it seems rather common.
-
-		// YouTube deliberately returns html escaped strings.
-		// See: https://issuetracker.google.com/u/1/issues/128673539
-		videoTitle := html.UnescapeString(snippet.Title)
-
-		cleanVideoTitle := stringcmp.GetWordsFocusedString(videoTitle)
-
-		cleanTrackName := stringcmp.GetWordsFocusedString(track.Name)
-		// if the video title doesn't contain the track's name ignore it!
-		if !stringcmp.ContainsWords(cleanVideoTitle, cleanTrackName) {
-			continue
-		}
-
-		// We track the amount of runes we can reasonably explain the presence
-		// of in the title. We can then use the percentage of "explainable"
-		// runes to score a result.
-		explainedRunes := utf8.RuneCountInString(cleanTrackName)
-
-		if track.ArtistID != nil {
-			cleanArtistName := stringcmp.GetWordsFocusedString(track.Artist.Name)
-			if strings.Contains(cleanVideoTitle, cleanArtistName) {
-				explainedRunes += utf8.RuneCountInString(cleanArtistName)
-			} else if !stringcmp.WordsContainedInAny(cleanArtistName,
-				html.UnescapeString(snippet.ChannelTitle),
-				html.UnescapeString(snippet.Description)) {
-				// if we can't find the artist, ignore the result entirely!
-				continue
-			}
-		} else {
-			// TODO what if no artist?
-		}
-
-		// Check for multiple artists and remove them from title.
-		foundMultipleArtists := false
-		for _, artist := range track.AdditionalArtists {
-			cleanArtistName := stringcmp.GetWordsFocusedString(artist.Name)
-			if strings.Contains(cleanVideoTitle, cleanArtistName) {
-				// allow a space between artist and title
-				explainedRunes += utf8.RuneCountInString(cleanArtistName) + 1
-				foundMultipleArtists = true
-			}
-		}
-
-		// if we found multiple artists we can explain the "ft.".
-		if foundMultipleArtists {
-			word := stringcmp.ContainsAnyOf(videoTitle, "feat.", "ft.", "featuring")
-			if word != "" {
-				// allow 2 spaces to the side of the "ft."
-				explainedRunes += utf8.RuneCountInString(word) + 2
-			}
-		}
-
-		// explain the album name in the title.
-		if track.AlbumID != nil {
-			cleanAlbumName := stringcmp.GetWordsFocusedString(track.Album.Name)
-			if strings.Contains(cleanVideoTitle, cleanAlbumName) {
-				// allow 1 space for the album name
-				explainedRunes += utf8.RuneCountInString(cleanAlbumName) + 1
-			}
-		}
-
-		titleScore := 100 * explainedRunes / utf8.RuneCountInString(cleanVideoTitle)
-		if titleScore <= minTitleScorePercentage {
-			continue
-		}
-
-		relevantResults = append(relevantResults, scoredResult{
-			TitleScore: titleScore,
-			VideoID:    res.Id.VideoId,
-			Result:     res,
-		})
 	}
 
 	if len(relevantResults) == 0 {

@@ -1,4 +1,4 @@
-package bidi
+package bracket
 
 import (
 	"github.com/stretchr/testify/assert"

@@ -2,6 +2,8 @@ package stringcmp
 
 import (
 	"strings"
+	"unicode"
+	"unicode/utf8"
 )
 
 var letterLowerMapper = ChainMapper(ReplaceNonLettersWithSpaceMapper(), LowerMapper())
@@ -12,11 +14,43 @@ func GetWordsFocusedString(s string) string {
 	return strings.Map(letterLowerMapper, s)
 }
 
-// ContainsWords checks whether the given substring is contained in s.
+// ContainsSurrounded checks whether the substring is contained in s and is
+// surrounded by (unicode) spaces.
+func ContainsSurrounded(s, substring string) bool {
+	if len(substring) == 0 {
+		return true
+	}
+
+	i := strings.Index(s, substring)
+	if i == -1 {
+		return false
+	}
+
+	// check if preceded by space
+	if i > 0 {
+		r, _ := utf8.DecodeLastRuneInString(s[:i])
+		if !unicode.IsSpace(r) {
+			return false
+		}
+	}
+
+	// check if followed by space
+	end := i + len(substring)
+	if end < len(s) {
+		r, _ := utf8.DecodeRuneInString(s[end:])
+		if !unicode.IsSpace(r) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// ContainsSurroundedIgnoreSpace checks whether the given substring is contained in s.
 // The check ignores spaces within the substring, as long as it is surrounded by
-// either spaces or word ends.
-func ContainsWords(s, substring string) bool {
-	substring = strings.Map(RemoveNonLettersMapper(), substring)
+// spaces in s.
+func ContainsSurroundedIgnoreSpace(s, substring string) bool {
+	substring = strings.Map(RemoveSpaceMapper(), substring)
 
 	words := strings.Fields(s)
 	for i, word := range words {
@@ -50,17 +84,4 @@ func ContainsAnyOf(text string, substrs ...string) string {
 	}
 
 	return ""
-}
-
-// WordsContainedInAny checks whether the given string is contained in any of
-// the provided strings.
-func WordsContainedInAny(words string, texts ...string) bool {
-	words = GetWordsFocusedString(words)
-	for _, text := range texts {
-		if strings.Contains(GetWordsFocusedString(text), words) {
-			return true
-		}
-	}
-
-	return false
 }

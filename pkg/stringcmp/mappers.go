@@ -39,6 +39,17 @@ func ReplaceNonLettersWithSpaceMapper() RuneMapper {
 	}
 }
 
+// RemoveSpaceMapper returns a RuneMapper that removes all unicode space runes.
+func RemoveSpaceMapper() RuneMapper {
+	return func(r rune) rune {
+		if unicode.IsSpace(r) {
+			return -1
+		}
+
+		return r
+	}
+}
+
 // RemoveNonLetterMapper returns a RuneMapper that removes all runes that aren't
 // letters or numbers.
 func RemoveNonLettersMapper() RuneMapper {

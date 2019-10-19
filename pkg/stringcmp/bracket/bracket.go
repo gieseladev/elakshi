@@ -1,4 +1,4 @@
-package bidi
+package bracket
 
 import (
 	"sort"

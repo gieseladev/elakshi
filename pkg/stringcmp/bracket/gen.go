@@ -16,7 +16,7 @@ import (
 
 var (
 	outputFile = flag.String("out", "pairs.go", "output file")
-	outPackage = flag.String("package", "bidi", "output package")
+	outPackage = flag.String("package", "bracket", "output package")
 	pairsFile  = flag.String("pairs", "BidiBrackets", "pairs file")
 )
 
@@ -137,7 +137,9 @@ func main() {
 		"Code generated at %s! DO NOT EDIT.",
 		time.Now().UTC().Format(time.Stamp),
 	))
-	f.HeaderComment("//go:generate go run gen.go")
+
+	args := strings.Join(os.Args[1:], " ")
+	f.HeaderComment("//go:generate go run gen.go " + args)
 
 	if err := addPairMaps(f); err != nil {
 		panic(err)

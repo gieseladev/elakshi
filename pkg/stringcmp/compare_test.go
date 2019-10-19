@@ -1,6 +1,22 @@
 package stringcmp
 
-import "testing"
+import (
+	"github.com/stretchr/testify/assert"
+	"testing"
+)
+
+func TestContainsSurrounded(t *testing.T) {
+	a := assert.New(t)
+
+	a.True(ContainsSurrounded("hello world", "hello"))
+	a.True(ContainsSurrounded("hello world", "world"))
+	a.True(ContainsSurrounded("hello world", "hello world"))
+
+	a.True(ContainsSurrounded("a b c d", "b c"))
+
+	a.False(ContainsSurrounded("a bc d", "b"))
+	a.False(ContainsSurrounded("a bc d", "c"))
+}
 
 func TestStringContainsWords(t *testing.T) {
 	type args struct {
@@ -49,8 +65,8 @@ func TestStringContainsWords(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := ContainsWords(tt.args.s, tt.args.substring); got != tt.want {
-				t.Errorf("ContainsWords() = %v, want %v", got, tt.want)
+			if got := ContainsSurroundedIgnoreSpace(tt.args.s, tt.args.substring); got != tt.want {
+				t.Errorf("ContainsSurroundedIgnoreSpace() = %v, want %v", got, tt.want)
 			}
 		})
 	}

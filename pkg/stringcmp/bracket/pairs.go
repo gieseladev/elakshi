@@ -1,7 +1,7 @@
-// Code generated at Oct 17 22:30:55! DO NOT EDIT.
+// Code generated at Oct 18 14:57:43! DO NOT EDIT.
 //go:generate go run gen.go
 
-package bidi
+package bracket
 
 var oPairs = map[rune]rune{
 	'(': ')',
