@@ -25,6 +25,36 @@ func (c *Core) Close() error {
 	)
 }
 
+// AddServices uses the given services to create the extractor pool and track
+// source finder. It will panic if either of them is already set, no database is
+// set, or an invalid service type is passed.
+func (c *Core) AddServices(services ...interface{}) {
+	if c.ExtractorPool != nil || c.TrackSourceFinder != nil {
+		panic("api/core: core already has an extractor pool or track source finder.")
+	}
+
+	if c.DB == nil {
+		panic("api/core: database must be set to add services.")
+	}
+
+	var searchers []audiosrc.Searcher
+	var extractors []infoextract.Extractor
+
+	for _, s := range services {
+		switch s := s.(type) {
+		case audiosrc.Searcher:
+			searchers = append(searchers, s)
+		case infoextract.Extractor:
+			extractors = append(extractors, s)
+		default:
+			panic("api/core: unexpected service type passed")
+		}
+	}
+
+	c.TrackSourceFinder = audiosrc.NewFinder(c.DB, searchers...)
+	c.ExtractorPool = infoextract.CollectExtractors(extractors...)
+}
+
 type coreKey struct{}
 
 // WithCore adds a Core  to a context.

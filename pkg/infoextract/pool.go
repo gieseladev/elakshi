@@ -3,7 +3,6 @@ package infoextract
 import (
 	"net/url"
 	"strings"
-	"sync"
 )
 
 // HasHostnames is an interface for an Extractor which extracts for specific
@@ -33,8 +32,6 @@ type URIChecker interface {
 
 // An ExtractorPool collects extractors.
 type ExtractorPool struct {
-	mux sync.RWMutex
-
 	extractors map[string]Extractor
 
 	uriCheckers         []URIChecker
@@ -42,19 +39,13 @@ type ExtractorPool struct {
 	extractorByHostname map[string]Extractor
 }
 
-// AddExtractors adds extractors to the pool.
-// Passing a nil extractor will panic.
-func (p *ExtractorPool) AddExtractors(extractors ...Extractor) {
-	p.mux.Lock()
-	defer p.mux.Unlock()
+// Create a new extractor pool from the given extractors.
+// Passing a nil extractor will cause a panic.
+func CollectExtractors(extractors ...Extractor) *ExtractorPool {
+	p := new(ExtractorPool)
 
-	if p.extractors == nil {
-		p.extractors = make(map[string]Extractor)
-	}
-
-	if p.extractorByHostname == nil {
-		p.extractorByHostname = make(map[string]Extractor)
-	}
+	p.extractors = make(map[string]Extractor)
+	p.extractorByHostname = make(map[string]Extractor)
 
 	for _, extractor := range extractors {
 		if extractor == nil {
@@ -77,8 +68,9 @@ func (p *ExtractorPool) AddExtractors(extractors ...Extractor) {
 		if checker, ok := extractor.(URLChecker); ok {
 			p.urlCheckers = append(p.urlCheckers, checker)
 		}
-
 	}
+
+	return p
 }
 
 func (p *ExtractorPool) resolveExtractorFromURL(u *url.URL) (Extractor, bool) {
@@ -100,9 +92,6 @@ func (p *ExtractorPool) resolveExtractorFromURL(u *url.URL) (Extractor, bool) {
 // ResolveExtractor finds an extractor for the given uri.
 // To be discovered, an extractor has to register using AddCheckers.
 func (p *ExtractorPool) ResolveExtractor(uri string) (Extractor, bool) {
-	p.mux.RLock()
-	defer p.mux.RUnlock()
-
 	if u, err := url.Parse(uri); err == nil && u.Host != "" {
 		return p.resolveExtractorFromURL(u)
 	}
@@ -118,9 +107,6 @@ func (p *ExtractorPool) ResolveExtractor(uri string) (Extractor, bool) {
 
 // GetExtractor returns the extractor with the given extractor id.
 func (p *ExtractorPool) GetExtractor(extractorID string) (Extractor, bool) {
-	p.mux.RLock()
-	defer p.mux.RUnlock()
-
 	e, ok := p.extractors[extractorID]
 	return e, ok
 }

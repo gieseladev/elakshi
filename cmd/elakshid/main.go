@@ -6,9 +6,7 @@ import (
 	"github.com/gieseladev/elakshi/pkg/api"
 	"github.com/gieseladev/elakshi/pkg/api/http"
 	"github.com/gieseladev/elakshi/pkg/api/wamp"
-	"github.com/gieseladev/elakshi/pkg/audiosrc"
 	"github.com/gieseladev/elakshi/pkg/edb"
-	"github.com/gieseladev/elakshi/pkg/infoextract"
 	"github.com/gieseladev/elakshi/pkg/services/spotify"
 	"github.com/gieseladev/elakshi/pkg/services/youtube"
 	"github.com/gieseladev/glyrics/v3/pkg/search"
@@ -36,23 +34,25 @@ func getDB() *gorm.DB {
 	return db
 }
 
-func getExtractorPool(db *gorm.DB) (*infoextract.ExtractorPool, *audiosrc.Finder) {
+func getServices(db *gorm.DB) []interface{} {
 	ctx := context.Background()
+	var services []interface{}
 
 	yt, err := youtube.FromAPIKey(ctx, db, os.Getenv("YOUTUBE_API_KEY"))
 	if err != nil {
 		panic(err)
 	}
 
+	services = append(services, yt)
+
 	spotifyService, err := spotify.FromToken(ctx, db, os.Getenv("SPOTIFY_ID"), os.Getenv("SPOTIFY_SECRET"))
 	if err != nil {
 		panic(err)
 	}
 
-	pool := &infoextract.ExtractorPool{}
-	pool.AddExtractors(yt, spotifyService)
+	services = append(services, spotifyService)
 
-	return pool, audiosrc.NewFinder(db, yt)
+	return services
 }
 
 func getCore() *api.Core {
@@ -62,15 +62,14 @@ func getCore() *api.Core {
 
 	db := getDB()
 
-	extractorPool, sourceFinder := getExtractorPool(db)
-
-	return &api.Core{
+	core := &api.Core{
 		DB:             db,
 		LyricsSearcher: lyricsSearcher,
-
-		ExtractorPool:     extractorPool,
-		TrackSourceFinder: sourceFinder,
 	}
+
+	core.AddServices(getServices(db)...)
+
+	return core
 }
 
 func getHandler(ctx context.Context) api.Handler {
