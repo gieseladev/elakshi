@@ -3,7 +3,7 @@ module github.com/gieseladev/elakshi
 go 1.12
 
 require (
-	github.com/dave/jennifer v1.3.0 // indirect
+	github.com/dave/jennifer v1.3.0
 	github.com/gammazero/nexus/v3 v3.0.0
 	github.com/getsentry/sentry-go v0.3.0
 	github.com/gieseladev/glyrics/v3 v3.1.1

@@ -1,5 +1,4 @@
-// Code generated at Oct 18 14:57:43! DO NOT EDIT.
-//go:generate go run gen.go
+// Code generated using tools/genbidi on Oct 20 13:08:51! DO NOT EDIT.
 
 package bracket
 

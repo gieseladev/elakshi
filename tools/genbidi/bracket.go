@@ -1,5 +1,3 @@
-// +build ignore
-
 package main
 
 import (
@@ -8,16 +6,22 @@ import (
 	"flag"
 	"fmt"
 	"github.com/dave/jennifer/jen"
+	"io"
+	"log"
+	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 )
 
+const bidiBracketsURL = "https://unicode.org/Public/UCD/latest/ucd/BidiBrackets.txt"
+
 var (
 	outputFile = flag.String("out", "pairs.go", "output file")
 	outPackage = flag.String("package", "bracket", "output package")
-	pairsFile  = flag.String("pairs", "BidiBrackets", "pairs file")
+	pairsFile  = flag.String("pairs", bidiBracketsURL, "pairs file")
 )
 
 type BracketPair struct {
@@ -73,8 +77,23 @@ func parsePairLine(line string) (BracketPair, error) {
 	}, nil
 }
 
+func getPairsFileReader() (io.ReadCloser, error) {
+	path := *pairsFile
+	if _, err := url.Parse(path); err == nil {
+		log.Println("detected pairs file url")
+		resp, err := http.Get(path)
+		if err != nil {
+			return nil, err
+		}
+
+		return resp.Body, nil
+	}
+
+	return os.Open(path)
+}
+
 func parsePairsFile() ([]BracketPair, error) {
-	f, err := os.Open(*pairsFile)
+	f, err := getPairsFileReader()
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +129,7 @@ func orderPairsByType(pairs []BracketPair) map[string][]BracketPair {
 func addPairMaps(f *jen.File) error {
 	pairs, err := parsePairsFile()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	for name, pairs := range orderPairsByType(pairs) {
@@ -134,12 +153,9 @@ func main() {
 	f := jen.NewFile(*outPackage)
 
 	f.HeaderComment(fmt.Sprintf(
-		"Code generated at %s! DO NOT EDIT.",
+		"Code generated using tools/genbidi on %s! DO NOT EDIT.",
 		time.Now().UTC().Format(time.Stamp),
 	))
-
-	args := strings.Join(os.Args[1:], " ")
-	f.HeaderComment("//go:generate go run gen.go " + args)
 
 	if err := addPairMaps(f); err != nil {
 		panic(err)

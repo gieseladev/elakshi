@@ -1,5 +1,7 @@
 package bracket
 
+//go:generate go run github.com/gieseladev/elakshi/tools/genbidi
+
 import (
 	"sort"
 	"strings"
@@ -57,6 +59,9 @@ func splitBracketGroupContent(s string, start, end int, matches []bracketMatch, 
 		pmOp := matches[i].OpenIndex
 		pmCl := matches[i].CloseIndex
 
+		between.WriteString(s[prevCl+1 : pmOp])
+		prevCl = pmCl
+
 		// find all matches within the current match.
 		childrenEnd := i + 1
 		for ; childrenEnd < len(matches); childrenEnd++ {
@@ -65,18 +70,22 @@ func splitBracketGroupContent(s string, start, end int, matches []bracketMatch, 
 			}
 		}
 
-		between.WriteString(s[prevCl+1 : pmOp])
-		prevCl = pmCl
-
 		children := matches[i+1 : childrenEnd]
-		if len(children) == 0 {
+		switch len(children) {
+		case 0:
 			// no children, trivial
 			parts[i+1] = s[pmOp+1 : pmCl]
-			i++
-			continue
-		}
+		case 1:
+			cOp := children[0].OpenIndex
+			cCl := children[0].CloseIndex
 
-		splitBracketGroupContent(s, pmOp+1, pmCl, children, parts[i+1:childrenEnd+1])
+			// surrounding text for parent
+			parts[i+1] = s[pmOp+1:cOp] + s[cCl+1:pmCl]
+			// enclosed text to child
+			parts[i+2] = s[cOp+1 : cCl]
+		default:
+			splitBracketGroupContent(s, pmOp+1, pmCl, children, parts[i+1:childrenEnd+1])
+		}
 
 		i = childrenEnd
 	}
