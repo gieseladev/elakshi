@@ -1,4 +1,4 @@
-package stringcmp
+package songtitle
 
 import (
 	"github.com/stretchr/testify/assert"
@@ -17,17 +17,9 @@ func TestSplitOnDash(t *testing.T) {
 		SplitOnDash("hello - world---how - are you?"))
 }
 
-func TestSplitParts(t *testing.T) {
+func TestSplitOnAnyRuneOf(t *testing.T) {
 	a := assert.New(t)
 
-	a.Equal([]string{"Binary Star", "moll", "feat. Uru"},
-		SplitParts("Binary Star (feat. Uru) - moll"))
-}
-
-func BenchmarkSplitParts(b *testing.B) {
-	b.ReportAllocs()
-
-	for i := 0; i < b.N; i++ {
-		_ = SplitParts("Binary Star (feat. Uru) - moll")
-	}
+	a.Equal([]string{"hello", " world", " What"},
+		SplitOnAnyRuneOf("hello, world. What", []rune{',', '.'}))
 }

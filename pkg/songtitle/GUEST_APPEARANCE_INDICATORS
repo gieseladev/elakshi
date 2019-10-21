@@ -1,0 +1,9 @@
+# Taken from: https://en.wikipedia.org/wiki/Guest_appearance
+
+featuring
+feat.
+ft.
+f/
+f.
+
+# ^f(?:eaturing(?:\PL|\PN)|eat\.|t\.|/|\.)
