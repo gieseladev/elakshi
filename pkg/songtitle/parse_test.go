@@ -49,6 +49,16 @@ func TestParseTitle(t *testing.T) {
 			BaselineParts:    []string{"Ed Sheeran", "South of the Border"},
 			GuestAppearances: []string{"Camila Cabello", "Cardi B"},
 		},
+		{
+			Input:            "Luis Fonsi - Despacito ft. Daddy Yankee",
+			BaselineParts:    []string{"Luis Fonsi", "Despacito"},
+			GuestAppearances: []string{"Daddy Yankee"},
+		},
+		{
+			Input:            "Binary Star (feat. Uru) - moll",
+			BaselineParts:    []string{"Binary Star", "moll"},
+			GuestAppearances: []string{"Uru"},
+		},
 	}
 
 	for _, testCase := range cases {
