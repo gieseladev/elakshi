@@ -121,6 +121,8 @@ func scoreSearchResult(track edb.Track, sr *youtube.SearchResult) (scoredResult,
 	videoTitle := html.UnescapeString(snippet.Title)
 
 	cleanVideoTitle := stringcmp.GetWordsFocusedString(videoTitle)
+
+	// TODO extract
 	cleanTrackName := stringcmp.GetWordsFocusedString(track.Name)
 
 	cleanChannelTitleL := lazy.StringFunc(func() string {
@@ -161,6 +163,7 @@ func scoreSearchResult(track edb.Track, sr *youtube.SearchResult) (scoredResult,
 	if stringcmp.ContainsSurroundedIgnoreSpace(cleanVideoTitle, cleanTrackName) {
 		explainedRunes += utf8.RuneCountInString(cleanTrackName)
 	} else {
+		// TODO extract
 		trackTitle := songtitle.ParseTitle(track.Name)
 
 		for _, part := range trackTitle.BaselineParts {
@@ -197,7 +200,7 @@ func scoreSearchResult(track edb.Track, sr *youtube.SearchResult) (scoredResult,
 
 	// Check for multiple artists and remove them from title.
 	foundMultipleArtists := false
-	for _, artist := range track.AdditionalArtists {
+	for _, artist := range track.AdditionalArtists { // TODO extract
 		cleanArtistName := stringcmp.GetWordsFocusedString(artist.Name)
 		// we're not searching the description / channel title here because
 		// we don't actually care whether the additional artists are there or
@@ -211,6 +214,7 @@ func scoreSearchResult(track edb.Track, sr *youtube.SearchResult) (scoredResult,
 
 	// if we found multiple artists we can explain the "ft.".
 	if foundMultipleArtists {
+		// TODO use songtitle library for this
 		word := stringcmp.ContainsAnyOf(videoTitle, "feat.", "ft.", "featuring")
 		if word != "" {
 			// allow 2 spaces to the side of the "ft."
@@ -220,6 +224,7 @@ func scoreSearchResult(track edb.Track, sr *youtube.SearchResult) (scoredResult,
 
 	// explain the album name in the title.
 	if track.AlbumID != nil {
+		// TODO extract
 		cleanAlbumName := stringcmp.GetWordsFocusedString(track.Album.Name)
 		if stringcmp.ContainsSurrounded(cleanVideoTitle, cleanAlbumName) {
 			// allow 1 space
@@ -227,6 +232,7 @@ func scoreSearchResult(track edb.Track, sr *youtube.SearchResult) (scoredResult,
 		}
 	}
 
+	// TODO extract rune count of cleanVideoTitle
 	res.TitleScore = 100 * explainedRunes / utf8.RuneCountInString(cleanVideoTitle)
 	if res.TitleScore <= minTitleScorePercentage {
 		// TODO check whether there are any filler or content labels in the
