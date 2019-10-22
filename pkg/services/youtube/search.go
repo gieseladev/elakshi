@@ -7,6 +7,7 @@ import (
 	"github.com/gieseladev/elakshi/pkg/edb"
 	"github.com/gieseladev/elakshi/pkg/iso8601"
 	"github.com/gieseladev/elakshi/pkg/lazy"
+	"github.com/gieseladev/elakshi/pkg/songtitle"
 	"github.com/gieseladev/elakshi/pkg/stringcmp"
 	"google.golang.org/api/youtube/v3"
 	"html"
@@ -137,43 +138,56 @@ func scoreSearchResult(track edb.Track, sr *youtube.SearchResult) (scoredResult,
 	// runes to score a result.
 	explainedRunes := 0
 
+	containedSurroundedInAny := func(s string) bool {
+		s = stringcmp.GetWordsFocusedString(s)
+
+		switch {
+		case stringcmp.ContainsSurrounded(cleanVideoTitle, s):
+			explainedRunes += utf8.RuneCountInString(s)
+		// the title might contain additional artists which may be part of
+		// the channel title.
+		// Other parts can be part of the description as well.
+		case strContainedSurroundedInAnyOfL(s,
+			cleanDescriptionL, cleanChannelTitleL):
+		default:
+			// if we can't find all parts, reject result
+			return false
+		}
+
+		return true
+	}
+
 	// if the video title doesn't contain the track's name ignore it!
 	if stringcmp.ContainsSurroundedIgnoreSpace(cleanVideoTitle, cleanTrackName) {
 		explainedRunes += utf8.RuneCountInString(cleanTrackName)
 	} else {
-		trackNameParts := stringcmp.SplitParts(track.Name)
-		for _, part := range trackNameParts {
-			// TODO find "important parts" which must be contained in the title!
-			// 	 Baseline (text outside of brackets) should be important.
-			//	 There can be multiple baseline parts though. Only one has to
-			//	 part of the video title.
+		trackTitle := songtitle.ParseTitle(track.Name)
 
+		for _, part := range trackTitle.BaselineParts {
 			part = stringcmp.GetWordsFocusedString(part)
 
-			switch {
-			case stringcmp.ContainsSurrounded(cleanVideoTitle, part):
-				explainedRunes += utf8.RuneCountInString(part)
-			// the title might contain additional artists which may be part of
-			// the channel title.
-			// Other parts can be part of the description as well.
-			case strContainedSurroundedInAnyOfL(part,
-				cleanDescriptionL, cleanChannelTitleL):
-			default:
-				// if we can't find all parts, reject result
+			if !stringcmp.ContainsSurrounded(cleanVideoTitle, part) {
+				return res, false
+			}
+
+			explainedRunes += utf8.RuneCountInString(part)
+		}
+
+		for _, part := range trackTitle.GuestAppearances {
+			if !containedSurroundedInAny(part) {
+				return res, false
+			}
+		}
+
+		for _, part := range trackTitle.OtherParts {
+			if !containedSurroundedInAny(part) {
 				return res, false
 			}
 		}
 	}
 
 	if track.ArtistID != nil {
-		cleanArtistName := stringcmp.GetWordsFocusedString(track.Artist.Name)
-
-		switch {
-		case stringcmp.ContainsSurrounded(cleanVideoTitle, cleanArtistName):
-			explainedRunes += utf8.RuneCountInString(cleanArtistName)
-		case strContainedSurroundedInAnyOfL(cleanArtistName,
-			cleanChannelTitleL, cleanDescriptionL):
-		default:
+		if !containedSurroundedInAny(track.Artist.Name) {
 			// if we can't find the artist, ignore the result entirely!
 			return res, false
 		}
@@ -215,6 +229,8 @@ func scoreSearchResult(track edb.Track, sr *youtube.SearchResult) (scoredResult,
 
 	res.TitleScore = 100 * explainedRunes / utf8.RuneCountInString(cleanVideoTitle)
 	if res.TitleScore <= minTitleScorePercentage {
+		// TODO check whether there are any filler or content labels in the
+		//  string we can ignore to get the score up.
 		return res, false
 	}
 

@@ -11,7 +11,22 @@ var letterLowerMapper = ChainMapper(ReplaceNonLettersWithSpaceMapper(), LowerMap
 // GetWordsFocusedString prepares a string in a manner which makes it useful for
 // word by word comparisons.
 func GetWordsFocusedString(s string) string {
-	return strings.Map(letterLowerMapper, s)
+	s = strings.Map(letterLowerMapper, s)
+
+	// it's possible to end up with a leading or trailing space (if there's was
+	// character a non-letter there before).
+
+	r, size := utf8.DecodeRuneInString(s)
+	if unicode.IsSpace(r) {
+		s = s[size:]
+	}
+
+	r, size = utf8.DecodeLastRuneInString(s)
+	if unicode.IsSpace(r) {
+		s = s[:len(s)-size]
+	}
+
+	return s
 }
 
 // ContainsSurrounded checks whether the substring is contained in s and is

@@ -71,3 +71,10 @@ func TestStringContainsWords(t *testing.T) {
 		})
 	}
 }
+
+func TestGetWordsFocusedString(t *testing.T) {
+	a := assert.New(t)
+
+	a.Equal("test", GetWordsFocusedString("[test]"))
+	a.Equal("h3ll0 w0rl", GetWordsFocusedString("h3ll0__:__w0rl$"))
+}
