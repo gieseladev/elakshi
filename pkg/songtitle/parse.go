@@ -2,6 +2,7 @@ package songtitle
 
 import (
 	"github.com/gieseladev/elakshi/pkg/songtitle/bracket"
+	"github.com/gieseladev/elakshi/pkg/songtitle/label"
 	"strings"
 )
 
@@ -15,6 +16,29 @@ type Title struct {
 	ContentLabels []string
 }
 
+func parsePart(parsed *Title, part string) bool {
+	if part == "" {
+		return true
+	}
+
+	switch {
+	case label.IsContentLabel(part):
+		parsed.ContentLabels = append(parsed.ContentLabels, part)
+		return true
+	case label.IsFiller(part):
+		// ignore filler
+		return true
+	}
+
+	guests := getGuestAppearances(part)
+	if len(guests) != 0 {
+		parsed.GuestAppearances = append(parsed.GuestAppearances, guests...)
+		return true
+	}
+
+	return false
+}
+
 func ParseTitle(title string) Title {
 	parsed := Title{
 		Raw: title,
@@ -22,26 +46,33 @@ func ParseTitle(title string) Title {
 
 	baseline, others := splitBaselineParts(title)
 
-	for i, part := range others {
-		guests := getGuestAppearances(part)
+	for partIndex, part := range baseline {
+		subparts := splitVisuallyDistinct(part)
+		for i := 0; i < len(subparts); i++ {
+			s := strings.Join(subparts[i:], " ")
 
-		switch {
-		case len(guests) != 0:
-			parsed.GuestAppearances = append(parsed.GuestAppearances, guests...)
-		case isContentLabel(part):
-			parsed.ContentLabels = append(parsed.ContentLabels, part)
-		case isFiller(part):
-		default:
-			continue
+			if parsePart(&parsed, s) {
+				p := strings.Join(subparts[:i], " ")
+				if p == "" {
+					// TODO again, bad idea. Don't popedipop
+					baseline = deleteStringSlice(baseline, partIndex)
+				} else {
+					baseline[partIndex] = p
+				}
+
+				break
+			}
 		}
-
-		// remove the part from others
-		others = deleteStringSlice(others, i)
 	}
 
-	// run feature detection
-
-	// baseline may contain ft. at any point, but "other" must start with it.
+	for i, part := range others {
+		// TODO removing during iteration is probably a bad idea. Use the in-place
+		//  filter method
+		if parsePart(&parsed, part) {
+			// remove the part from others
+			others = deleteStringSlice(others, i)
+		}
+	}
 
 	// add the remaining parts
 	parsed.BaselineParts = baseline
@@ -63,28 +94,25 @@ func splitBaselineParts(s string) ([]string, []string) {
 	return important, other
 }
 
-func getGuestAppearances(s string) []string {
-	// detect the guest thing
+func splitVisuallyDistinct(s string) []string {
+	return strings.Fields(s)
+}
 
-	if strings.HasPrefix(s, "feat.") {
-		s = strings.TrimSpace(s[len("feat."):])
-	} else {
+func getGuestAppearances(s string) []string {
+	// TODO do this more efficiently
+
+	parts := splitVisuallyDistinct(s)
+	if len(parts) < 2 || !label.IsGuestAppearance(parts[0]) {
 		return nil
 	}
 
-	// TODO split by "&", ",", and others
-	guests := SplitOnAnyRuneOf(s, []rune{'&', ','})
+	s = strings.Join(parts[1:], " ")
+
+	guests := strings.Split(s, ",")
+	last := strings.Split(guests[len(guests)-1], "&")
+	guests = append(guests[:len(guests)-1], last...)
+
 	mapStringSlice(guests, strings.TrimSpace)
 
 	return guests
-}
-
-func isContentLabel(s string) bool {
-	// TODO
-	return false
-}
-
-func isFiller(s string) bool {
-	// TODO
-	return false
 }

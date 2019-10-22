@@ -1,13 +1,13 @@
 package bracket
 
-//go:generate go run github.com/gieseladev/elakshi/tools/genbidi
-
 import (
 	"sort"
 	"strings"
 	"unicode"
 	"unicode/utf8"
 )
+
+//go:generate go run github.com/gieseladev/elakshi/tools/genbidi
 
 type bracketMatch struct {
 	OpeningRune rune

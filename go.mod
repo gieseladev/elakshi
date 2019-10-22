@@ -8,6 +8,7 @@ require (
 	github.com/getsentry/sentry-go v0.3.0
 	github.com/gieseladev/glyrics/v3 v3.1.1
 	github.com/jinzhu/gorm v1.9.11
+	github.com/jinzhu/inflection v1.0.0
 	github.com/stretchr/testify v1.4.0
 	github.com/zmb3/spotify v0.0.0-20190930171422-c23dd5d1a0c9
 	golang.org/x/crypto v0.0.0-20190926180335-cea2066c6411 // indirect

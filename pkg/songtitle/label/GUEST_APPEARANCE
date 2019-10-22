@@ -1,0 +1,15 @@
+# Taken from: https://en.wikipedia.org/wiki/Guest_appearance
+#
+
+featuring
+feat.
+ft.
+f/
+f.
+
+# The following regex matches these strings (in order of precedence):
+#   "featuring", "feat.", "ft.", "f/", "f."
+# /^f(?:eaturing|eat\.|t\.|/|\.)$/
+
+
+with

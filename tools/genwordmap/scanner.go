@@ -1,4 +1,4 @@
-package genwordmap
+package main
 
 import (
 	"bufio"

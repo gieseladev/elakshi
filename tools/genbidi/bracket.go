@@ -154,7 +154,7 @@ func main() {
 
 	f.HeaderComment(fmt.Sprintf(
 		"Code generated using tools/genbidi on %s! DO NOT EDIT.",
-		time.Now().UTC().Format(time.Stamp),
+		time.Now().UTC().Format(time.RFC822),
 	))
 
 	if err := addPairMaps(f); err != nil {
