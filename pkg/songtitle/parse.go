@@ -116,3 +116,16 @@ func getGuestAppearances(s string) []string {
 
 	return guests
 }
+
+func CountIrrelevantLabels(s string) int {
+	c := 0
+	if loc := label.IndexContentLabel(s); loc != nil {
+		c += loc[1] - loc[0]
+	}
+
+	if loc := label.IndexFiller(s); loc != nil {
+		c += loc[1] - loc[0]
+	}
+
+	return c
+}

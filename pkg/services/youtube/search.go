@@ -17,9 +17,6 @@ import (
 	"unicode/utf8"
 )
 
-// TODO
-//		- Interpret track names and search for separate parts. (partially done)
-
 const (
 	// minTitleScorePercentage is the required percentage of explained runes in
 	// a video title for it to be accepted.
@@ -106,15 +103,6 @@ func scoreSearchResult(track edb.Track, sr *youtube.SearchResult) (scoredResult,
 	if snippet.LiveBroadcastContent != "none" {
 		return res, false
 	}
-
-	// TODO interpret buzzwords in titles. Let's create a separate library
-	//      for this, since it seems rather common.
-	//	    especially ["official video", "original mix", "original"]
-	//	    and probably more are implied when they're absent. Hence they
-	//		ought to be removed from video titles.
-	//		If they're also part of the track title, they need to be
-	//		removed from it as well.
-	//		"ft." / "feat." ought to be detected as well.
 
 	// YouTube deliberately returns html escaped strings.
 	// See: https://issuetracker.google.com/u/1/issues/128673539
@@ -235,8 +223,12 @@ func scoreSearchResult(track edb.Track, sr *youtube.SearchResult) (scoredResult,
 	// TODO extract rune count of cleanVideoTitle
 	res.TitleScore = 100 * explainedRunes / utf8.RuneCountInString(cleanVideoTitle)
 	if res.TitleScore <= minTitleScorePercentage {
-		// TODO check whether there are any filler or content labels in the
-		//  string we can ignore to get the score up.
+		// count the irrelevant labels and "explain" them.
+		explainedRunes += songtitle.CountIrrelevantLabels(cleanVideoTitle)
+		res.TitleScore = 100 * explainedRunes / utf8.RuneCountInString(cleanVideoTitle)
+	}
+
+	if res.TitleScore <= minTitleScorePercentage {
 		return res, false
 	}
 
@@ -298,6 +290,7 @@ func (yt *youtubeService) buildResults(track edb.Track, relevantResults []scored
 
 func (yt *youtubeService) Search(ctx context.Context, track edb.Track) ([]audiosrc.Result, error) {
 	// TODO use external references to find youtube video
+	//		or should external references to youtube VIDEOS even exist?
 
 	relevantResults, err := yt.basicSearch(ctx, track)
 	if err != nil {

@@ -1,4 +1,4 @@
-// Code generated using tools/genwordmap on 22 Oct 19 16:30 UTC! DO NOT EDIT.
+// Code generated using tools/genwordmap on 23 Oct 19 14:10 UTC! DO NOT EDIT.
 // Args: --package label CONTENT_LABELS FILLER GUEST_APPEARANCE
 
 package label
@@ -21,6 +21,15 @@ func IsContentLabel(s string) bool {
 	}
 	return false
 }
+func IndexContentLabel(s string) []int {
+	s = strings.ToLower(s)
+	for token, _ := range contentLabelTokens {
+		if i := strings.Index(s, token); i > -1 {
+			return []int{i, i + len(token)}
+		}
+	}
+	return nil
+}
 
 var fillerTokens = map[string]struct{}{
 	"official music video": {},
@@ -36,6 +45,15 @@ func IsFiller(s string) bool {
 		return true
 	}
 	return false
+}
+func IndexFiller(s string) []int {
+	s = strings.ToLower(s)
+	for token, _ := range fillerTokens {
+		if i := strings.Index(s, token); i > -1 {
+			return []int{i, i + len(token)}
+		}
+	}
+	return nil
 }
 
 var guestAppearanceTokens = map[string]struct{}{
@@ -53,4 +71,13 @@ func IsGuestAppearance(s string) bool {
 		return true
 	}
 	return false
+}
+func IndexGuestAppearance(s string) []int {
+	s = strings.ToLower(s)
+	for token, _ := range guestAppearanceTokens {
+		if i := strings.Index(s, token); i > -1 {
+			return []int{i, i + len(token)}
+		}
+	}
+	return nil
 }

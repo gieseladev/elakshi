@@ -36,7 +36,7 @@ func NewHTTPHandler(ctx context.Context, addr string) *httpHandler {
 		Handler: mux,
 	}
 
-	sentryHandler := sentryhttp.New(sentryhttp.Options{})
+	sentryHandler := sentryhttp.New(sentryhttp.Options{Repanic: true})
 
 	return &httpHandler{
 		ctx:  ctx,

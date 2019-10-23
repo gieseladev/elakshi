@@ -12,6 +12,20 @@ type Parsed struct {
 	Tokens  []string
 }
 
+func (p Parsed) RegExpsID() string {
+	if len(p.RegExps) == 0 {
+		return ""
+	}
+	return toDromedaryCase(p.Name) + "Matchers"
+}
+
+func (p Parsed) TokensID() string {
+	if len(p.Tokens) == 0 {
+		return ""
+	}
+	return toDromedaryCase(p.Name) + "Tokens"
+}
+
 const (
 	regexSurr = "/"
 )
