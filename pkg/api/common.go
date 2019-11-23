@@ -43,6 +43,7 @@ func findLyrics(ctx context.Context, searcher search.Searcher, track edb.Track) 
 	}
 
 	// FIXME quality control!
+	//		use the "search" method but maybe in reverse?
 	info := glyrics.SearchFirst(ctx, searcher, queryBuilder.String())
 	if info == nil {
 		return edb.Lyrics{}, false

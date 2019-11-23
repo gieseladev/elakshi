@@ -32,9 +32,11 @@ func NewWAMPHandler(ctx context.Context, c *client.Client) *wampHandler {
 
 func (s *wampHandler) registerProcedures() error {
 	return errutil.CollectErrors(
-		s.c.Register("io.giesela.elakshi.get", s.get, wamp.Dict{}),
-		s.c.Register("io.giesela.elakshi.resolve", s.resolve, wamp.Dict{}),
-		s.c.Register("io.giesela.elakshi.get_audio_source", s.getAudio, wamp.Dict{}),
+		s.c.Register("io.giesela.elakshi.meta.assert_ready", s.metaAssertReady, nil),
+
+		s.c.Register("io.giesela.elakshi.get", s.get, nil),
+		s.c.Register("io.giesela.elakshi.resolve", s.resolve, nil),
+		s.c.Register("io.giesela.elakshi.get_audio_source", s.getAudio, nil),
 	)
 }
 
@@ -66,6 +68,10 @@ func handleError(err error) client.InvokeResult {
 	}
 
 	return res
+}
+
+func (s *wampHandler) metaAssertReady(ctx context.Context, invocation *wamp.Invocation) client.InvokeResult {
+	return client.InvokeResult{}
 }
 
 func (s *wampHandler) get(ctx context.Context, invocation *wamp.Invocation) client.InvokeResult {
