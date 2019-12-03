@@ -27,3 +27,7 @@ func FromAPIKey(ctx context.Context, db *gorm.DB, apiKey string) (*youtubeServic
 	service, err := youtube.NewService(ctx, option.WithAPIKey(apiKey))
 	return FromClient(db, service), err
 }
+
+func (yt *youtubeService) ServiceID() string {
+	return ytServiceName
+}

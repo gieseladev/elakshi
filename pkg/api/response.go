@@ -50,14 +50,13 @@ type AudioSourceResp struct {
 // AudioSourceRespFromTrackSource builds an AudioSourceResp from a
 // edb.TrackSource. The track source is expected to have the audio source
 // loaded.
-func AudioSourceRespFromTrackSource(trackSource edb.TrackSource) AudioSourceResp {
+func AudioSourceRespFromTrackSource(trackSource edb.TrackSource, uri string) AudioSourceResp {
 	audioSource := trackSource.AudioSource
 
 	return AudioSourceResp{
-		Source:     audioSource.Type,
-		Identifier: audioSource.URI,
-		// TODO uri?
-		URI:         "",
+		Source:      audioSource.Type,
+		Identifier:  audioSource.URI,
+		URI:         uri,
 		StartOffset: float64(trackSource.StartOffsetMS) / 1000,
 		EndOffset:   float64(trackSource.EndOffsetMS) / 1000,
 		IsLive:      false,

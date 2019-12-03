@@ -5,6 +5,7 @@ import (
 	"github.com/gieseladev/elakshi/pkg/audiosrc"
 	"github.com/gieseladev/elakshi/pkg/errutil"
 	"github.com/gieseladev/elakshi/pkg/infoextract"
+	"github.com/gieseladev/elakshi/pkg/service"
 	"github.com/gieseladev/glyrics/v3/pkg/search"
 	"github.com/jinzhu/gorm"
 )
@@ -28,7 +29,7 @@ func (c *Core) Close() error {
 // AddServices uses the given services to create the extractor pool and track
 // source finder. It will panic if either of them is already set, no database is
 // set, or an invalid service type is passed.
-func (c *Core) AddServices(services ...interface{}) {
+func (c *Core) AddServices(services ...service.Identifier) {
 	if c.ExtractorPool != nil || c.TrackSourceFinder != nil {
 		panic("api/core: core already has an extractor pool or track source finder.")
 	}

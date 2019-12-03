@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/gieseladev/elakshi/pkg/edb"
 	"github.com/gieseladev/glyrics/v3"
 	"github.com/gieseladev/glyrics/v3/pkg/search"
@@ -95,12 +96,17 @@ func (c *Core) GetTrackSource(ctx context.Context, eid string) (AudioSourceResp,
 	}
 
 	trackSource, err := c.TrackSourceFinder.GetTrackSource(ctx, trackID)
-
 	if err != nil {
 		return AudioSourceResp{}, err
 	}
 
-	return AudioSourceRespFromTrackSource(trackSource), nil
+	serviceName := trackSource.AudioSource.Type
+	service := c.TrackSourceFinder.GetSearcher(serviceName)
+	if service == nil {
+		panic(fmt.Sprintf("no service found for service name: %q", serviceName))
+	}
+
+	return AudioSourceRespFromTrackSource(trackSource, service.GenerateTrackURI(trackSource)), nil
 }
 
 func (c *Core) ResolveURI(ctx context.Context, uri string) (interface{}, error) {

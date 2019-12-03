@@ -345,6 +345,12 @@ func (yt *youtubeService) Search(ctx context.Context, track edb.Track) ([]audios
 	return yt.buildResults(track, relevantResults), nil
 }
 
+const youtubeVideoURI = "https://www.youtube.com/watch?v="
+
+func (yt *youtubeService) GenerateTrackURI(source edb.TrackSource) string {
+	return youtubeVideoURI + source.AudioSource.URI
+}
+
 // durationWithinPercentage checks whether the actual value is within perc
 // percent of the expected value.
 // perc is the percentage in centi.

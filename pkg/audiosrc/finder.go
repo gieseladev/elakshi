@@ -8,19 +8,48 @@ import (
 )
 
 type Finder struct {
-	db       *gorm.DB
-	searcher Searcher
+	db        *gorm.DB
+	searchers []Searcher
 }
 
 func NewFinder(db *gorm.DB, searchers ...Searcher) *Finder {
 	return &Finder{
-		db:       db,
-		searcher: CollectSearchers(searchers...),
+		db:        db,
+		searchers: searchers,
 	}
 }
 
+func (f *Finder) GetSearcher(service string) Searcher {
+	for _, searcher := range f.searchers {
+		if searcher.ServiceID() == service {
+			return searcher
+		}
+	}
+
+	return nil
+}
+
+func (f *Finder) Search(ctx context.Context, track edb.Track) ([]Result, error) {
+	for _, searcher := range f.searchers {
+		results, err := searcher.Search(ctx, track)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(results) == 0 {
+			continue
+		}
+
+		// TODO check whether results are good
+
+		return results, err
+	}
+
+	return nil, nil
+}
+
 func (f *Finder) SearchOne(ctx context.Context, track edb.Track) (Result, error) {
-	results, err := f.searcher.Search(ctx, track)
+	results, err := f.Search(ctx, track)
 	if err != nil {
 		return Result{}, err
 	}

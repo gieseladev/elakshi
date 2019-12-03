@@ -40,3 +40,7 @@ func FromToken(ctx context.Context, db *gorm.DB, clientID, clientSecret string) 
 
 	return FromClient(db, &client), nil
 }
+
+func (s *spotifyService) ServiceID() string {
+	return spotifyServiceName
+}

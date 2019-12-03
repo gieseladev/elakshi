@@ -3,6 +3,7 @@ package infoextract
 import (
 	"context"
 	"errors"
+	"github.com/gieseladev/elakshi/pkg/service"
 )
 
 var (
@@ -10,7 +11,7 @@ var (
 )
 
 type Extractor interface {
-	ExtractorID() string
+	service.Identifier
 
 	Extract(ctx context.Context, uri string) (interface{}, error)
 }

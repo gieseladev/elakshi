@@ -52,8 +52,7 @@ func CollectExtractors(extractors ...Extractor) *ExtractorPool {
 			panic("nil extractor passed")
 		}
 
-		extractorID := extractor.ExtractorID()
-		p.extractors[extractorID] = extractor
+		p.extractors[extractor.ServiceID()] = extractor
 
 		if checker, ok := extractor.(URIChecker); ok {
 			p.uriCheckers = append(p.uriCheckers, checker)

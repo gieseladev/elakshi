@@ -8,10 +8,6 @@ import (
 	"github.com/zmb3/spotify"
 )
 
-func (s *spotifyService) ExtractorID() string {
-	return spotifyServiceName
-}
-
 func (s *spotifyService) Extract(ctx context.Context, uri string) (interface{}, error) {
 	typ, id, err := parseURI(uri)
 	if err == ErrInvalidSpotifyURI {

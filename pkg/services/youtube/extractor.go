@@ -32,10 +32,6 @@ func extractHighestResThumbnail(d *youtube.ThumbnailDetails) *youtube.Thumbnail 
 	return d.Default
 }
 
-func (yt *youtubeService) ExtractorID() string {
-	return ytServiceName
-}
-
 func (yt *youtubeService) Extract(ctx context.Context, uri string) (interface{}, error) {
 	u, err := url.Parse(uri)
 	if err != nil {
