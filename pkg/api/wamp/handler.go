@@ -32,11 +32,11 @@ func NewWAMPHandler(ctx context.Context, c *client.Client) *wampHandler {
 
 func (s *wampHandler) registerProcedures() error {
 	return errutil.CollectErrors(
-		s.c.Register("io.giesela.elakshi.meta.assert_ready", s.metaAssertReady, nil),
+		s.c.Register("io.elakshi.meta.assert_ready", s.metaAssertReady, nil),
 
-		s.c.Register("io.giesela.elakshi.get", s.get, nil),
-		s.c.Register("io.giesela.elakshi.resolve", s.resolve, nil),
-		s.c.Register("io.giesela.elakshi.get_audio_source", s.getAudio, nil),
+		s.c.Register("io.elakshi.get", s.get, nil),
+		s.c.Register("io.elakshi.resolve", s.resolve, nil),
+		s.c.Register("io.elakshi.get_audio_source", s.getAudio, nil),
 	)
 }
 
