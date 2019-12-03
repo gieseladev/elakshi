@@ -7,6 +7,7 @@ import (
 	"github.com/gieseladev/elakshi/pkg/api/http"
 	"github.com/gieseladev/elakshi/pkg/api/wamp"
 	"github.com/gieseladev/elakshi/pkg/edb"
+	"github.com/gieseladev/elakshi/pkg/service"
 	"github.com/gieseladev/elakshi/pkg/services/spotify"
 	"github.com/gieseladev/elakshi/pkg/services/youtube"
 	"github.com/gieseladev/glyrics/v3/pkg/search"
@@ -34,9 +35,9 @@ func getDB() *gorm.DB {
 	return db
 }
 
-func getServices(db *gorm.DB) []interface{} {
+func getServices(db *gorm.DB) []service.Identifier {
 	ctx := context.Background()
-	var services []interface{}
+	var services []service.Identifier
 
 	yt, err := youtube.FromAPIKey(ctx, db, os.Getenv("YOUTUBE_API_KEY"))
 	if err != nil {
