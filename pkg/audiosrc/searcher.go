@@ -21,5 +21,6 @@ type Searcher interface {
 	// best to worst.
 	Search(ctx context.Context, track edb.Track) ([]Result, error)
 
+	// Generate the qualified uri for the track source.
 	GenerateTrackURI(source edb.TrackSource) string
 }

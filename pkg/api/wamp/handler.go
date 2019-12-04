@@ -31,12 +31,14 @@ func NewWAMPHandler(ctx context.Context, c *client.Client) *wampHandler {
 }
 
 func (s *wampHandler) registerProcedures() error {
-	return errutil.CollectErrors(
-		s.c.Register("io.elakshi.meta.assert_ready", s.metaAssertReady, nil),
+	const elakshiPrefix = "io.elakshi."
 
-		s.c.Register("io.elakshi.get", s.get, nil),
-		s.c.Register("io.elakshi.resolve", s.resolve, nil),
-		s.c.Register("io.elakshi.get_audio_source", s.getAudio, nil),
+	return errutil.CollectErrors(
+		s.c.Register(elakshiPrefix+"meta.assert_ready", s.metaAssertReady, nil),
+
+		s.c.Register(elakshiPrefix+"get_track", s.get, nil),
+		s.c.Register(elakshiPrefix+"resolve", s.resolve, nil),
+		s.c.Register(elakshiPrefix+"get_audio_source", s.getAudio, nil),
 	)
 }
 

@@ -42,12 +42,19 @@ func (c *Core) AddServices(services ...service.Identifier) {
 	var extractors []infoextract.Extractor
 
 	for _, s := range services {
-		switch s := s.(type) {
-		case audiosrc.Searcher:
+		found := false
+
+		if s, ok := s.(audiosrc.Searcher); ok {
 			searchers = append(searchers, s)
-		case infoextract.Extractor:
+			found = true
+		}
+
+		if s, ok := s.(infoextract.Extractor); ok {
 			extractors = append(extractors, s)
-		default:
+			found = true
+		}
+
+		if !found {
 			panic("api/core: unexpected service type passed")
 		}
 	}

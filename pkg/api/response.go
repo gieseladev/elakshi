@@ -54,7 +54,7 @@ func AudioSourceRespFromTrackSource(trackSource edb.TrackSource, uri string) Aud
 	audioSource := trackSource.AudioSource
 
 	return AudioSourceResp{
-		Source:      audioSource.Type,
+		Source:      audioSource.Service,
 		Identifier:  audioSource.URI,
 		URI:         uri,
 		StartOffset: float64(trackSource.StartOffsetMS) / 1000,

@@ -8,8 +8,8 @@ import (
 type AudioSource struct {
 	DBModel
 
-	Type string `gorm:"UNIQUE_INDEX:uix_uri_type;NOT NULL"`
-	URI  string `gorm:"UNIQUE_INDEX:uix_uri_type;NOT NULL"`
+	Service string `gorm:"UNIQUE_INDEX:uix_uri_type;NOT NULL"`
+	URI     string `gorm:"UNIQUE_INDEX:uix_uri_type;NOT NULL"`
 
 	TrackSources []TrackSource
 }

@@ -100,7 +100,7 @@ func (c *Core) GetTrackSource(ctx context.Context, eid string) (AudioSourceResp,
 		return AudioSourceResp{}, err
 	}
 
-	serviceName := trackSource.AudioSource.Type
+	serviceName := trackSource.AudioSource.Service
 	service := c.TrackSourceFinder.GetSearcher(serviceName)
 	if service == nil {
 		panic(fmt.Sprintf("no service found for service name: %q", serviceName))

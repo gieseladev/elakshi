@@ -277,8 +277,8 @@ func (yt *youtubeService) buildResults(track edb.Track, relevantResults []scored
 			EndOffsetMS:   uint32(res.VideoDurationMS),
 
 			AudioSource: &edb.AudioSource{
-				Type: ytServiceName,
-				URI:  res.VideoID,
+				Service: ytServiceName,
+				URI:     res.VideoID,
 			},
 		}
 

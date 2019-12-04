@@ -198,7 +198,7 @@ func (yt *youtubeService) parseVideo(ctx context.Context, video *youtube.Video) 
 	}
 
 	return edb.AudioSource{
-		Type:         ytServiceName,
+		Service:      ytServiceName,
 		URI:          video.Id,
 		TrackSources: trackSources,
 	}, nil

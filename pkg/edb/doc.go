@@ -1,4 +1,4 @@
-/* Package edb contains the Elakshi database models.
-
- */
+/*
+Package edb contains the Elakshi database models.
+*/
 package edb

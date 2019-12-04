@@ -64,8 +64,8 @@ func (f *Finder) SearchOne(ctx context.Context, track edb.Track) (Result, error)
 
 		if f.db.NewRecord(audioSource) {
 			err := f.db.FirstOrCreate(audioSource, edb.AudioSource{
-				Type: audioSource.Type,
-				URI:  audioSource.URI,
+				Service: audioSource.Service,
+				URI:     audioSource.URI,
 			}).Error
 			if err != nil {
 				return Result{}, err
